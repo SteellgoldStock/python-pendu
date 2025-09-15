@@ -1,0 +1,32 @@
+{
+  "Gaetan": {
+    "games_played": 1,
+    "games_won": 0,
+    "total_words_found": 0,
+    "total_wrong_letters": 10,
+    "total_time": 21.239648818969727,
+    "best_time": null,
+    "longest_word": 0,
+    "difficulty_stats": {
+      "easy": 1,
+      "middle": 0,
+      "hard": 0
+    },
+    "last_played": "2025-09-15T15:54:17.419861"
+  },
+  "KML": {
+    "games_played": 2,
+    "games_won": 1,
+    "total_words_found": 1,
+    "total_wrong_letters": 12,
+    "total_time": 318.30646657943726,
+    "best_time": 33.83019018173218,
+    "longest_word": 12,
+    "difficulty_stats": {
+      "easy": 1,
+      "middle": 0,
+      "hard": 1
+    },
+    "last_played": "2025-09-15T16:01:53.566532"
+  }
+}
