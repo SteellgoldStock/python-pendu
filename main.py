@@ -2,7 +2,6 @@ import string
 import unicodedata
 import threading
 import time
-import sys
 from list import choose_random_word
 
 RED = "\033[31m"
@@ -43,13 +42,11 @@ def get_input_with_timer(prompt, timeout=10, game_state=None):
             print(lives_display)
             print(f"\n{prompt}", end='', flush=True)
 
-        # Check for input multiple times during each second to be more responsive
         for _ in range(10):  # Check 10 times per second
             if input_result[0] is not None:
                 return input_result[0]
             time.sleep(0.1)  # Sleep for 100ms each time
 
-    # Final check after the timer expires to catch last-second input
     if input_result[0] is not None:
         return input_result[0]
 
@@ -209,6 +206,7 @@ def play_hangman():
 def main():
     """Main function"""
     while True:
+        ask_name = input("Quel est ton nom ? : ")
         play_hangman()
 
         replay = input("\nVeux-tu rejouer ? (o/n) : ").strip().lower()
