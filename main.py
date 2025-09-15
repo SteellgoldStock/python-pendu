@@ -115,10 +115,10 @@ def get_key():
 def show_menu():
     """Display interactive menu with arrow navigation"""
     menu_options = [
-        ("🎮 Jouer", "play"),
-        ("📊 Statistiques", "stats"),
-        ("🏆 Leaderboard", "leaderboard"),
-        ("❌ Quitter", "quit")
+        ("🎮  Jouer", "play"),
+        ("📊  Statistiques", "stats"),
+        ("🏆  Leaderboard", "leaderboard"),
+        ("❌  Quitter", "quit")
     ]
 
     selected = 0
@@ -126,7 +126,7 @@ def show_menu():
     while True:
         clear_screen()
         print(f"{YELLOW}═══════════════════════════════════════{RESET}")
-        print(f"{YELLOW}            🎯 JEU DU PENDU 🎯           {RESET}")
+        print(f"{YELLOW}            JEU DU PENDU           {RESET}")
         print(f"{YELLOW}═══════════════════════════════════════{RESET}\n")
 
         for i, (option_text, _) in enumerate(menu_options):
@@ -161,31 +161,31 @@ def show_player_stats(player_name):
     clear_screen()
 
     print(f"{BLUE}═══════════════════════════════════════{RESET}")
-    print(f"{BLUE}       📊 STATISTIQUES DE {player_name.upper()} 📊       {RESET}")
+    print(f"{BLUE}       STATISTIQUES DE {player_name.upper()}       {RESET}")
     print(f"{BLUE}═══════════════════════════════════════{RESET}\n")
 
-    print(f"🎮 Parties jouées: {player_stats["games_played"]}")
-    print(f"🏆 Parties gagnées: {player_stats["games_won"]}")
+    print(f"🎮  Parties jouées: {player_stats["games_played"]}")
+    print(f"🏆  Parties gagnées: {player_stats["games_won"]}")
 
     if player_stats["games_played"] > 0:
         win_rate = (player_stats["games_won"] / player_stats["games_played"]) * 100
-        print(f"📈 Taux de réussite: {win_rate:.1f}%")
+        print(f"📈  Taux de réussite: {win_rate:.1f}%")
 
-    print(f"📝 Mots trouvés: {player_stats["total_words_found"]}")
-    print(f"❌ Lettres fausses totales: {player_stats["total_wrong_letters"]}")
+    print(f"📝  Mots trouvés: {player_stats["total_words_found"]}")
+    print(f"❌  Lettres fausses totales: {player_stats["total_wrong_letters"]}")
 
     if player_stats["total_time"] > 0:
         avg_time = player_stats["total_time"] / player_stats["games_played"]
-        print(f"⏱️ Temps middle par partie: {avg_time:.1f}s")
+        print(f"⏱️  Temps middle par partie: {avg_time:.1f}s")
 
         if player_stats["total_words_found"] > 0:
             words_per_minute = player_stats["total_words_found"] / (player_stats["total_time"] / 60)
-            print(f"🚀 Mots par minute: {words_per_minute:.2f}")
+            print(f"🚀  Mots par minute: {words_per_minute:.2f}")
 
     if player_stats["best_time"]:
-        print(f"⚡ Meilleur temps: {player_stats["best_time"]:.1f}s")
+        print(f"⚡  Meilleur temps: {player_stats["best_time"]:.1f}s")
 
-    print(f"📏 Mot le plus long trouvé: {player_stats["longest_word"]} lettres")
+    print(f"📏  Mot le plus long trouvé: {player_stats["longest_word"]} lettres")
 
     print(f"\n{YELLOW}Répartition par difficulté:{RESET}")
     for diff, count in player_stats["difficulty_stats"].items():
@@ -193,7 +193,7 @@ def show_player_stats(player_name):
 
     if player_stats["last_played"]:
         last_played = datetime.datetime.fromisoformat(player_stats["last_played"])
-        print(f"\n🕒 Dernière partie: {last_played.strftime("%d/%m/%Y à %H:%M")}")
+        print(f"\n🕒  Dernière partie: {last_played.strftime("%d/%m/%Y à %H:%M")}")
 
     input(f"\n{GREEN}Appuyez sur Entrée pour retourner au menu...{RESET}")
 
@@ -221,24 +221,24 @@ def show_leaderboard():
 
     clear_screen()
     print(f"{YELLOW}═══════════════════════════════════════{RESET}")
-    print(f"{YELLOW}            🏆 LEADERBOARD 🏆            {RESET}")
+    print(f"{YELLOW}            LEADERBOARD            {RESET}")
     print(f"{YELLOW}═══════════════════════════════════════{RESET}\n")
 
     # Top wins
-    print(f"{GREEN}🏆 Top Victoires:{RESET}")
+    print(f"{GREEN}🏆  Top Victoires:{RESET}")
     for i, (name, data) in enumerate(players_by_wins[:5], 1):
         print(f"{i}. {name}: {data["games_won"]} victoires")
 
     # Top win rate (min 3 games)
     if players_by_winrate:
-        print(f"\n{BLUE}📈 Meilleur taux de réussite (min 3 parties):{RESET}")
+        print(f"\n{BLUE}📈  Meilleur taux de réussite (min 3 parties):{RESET}")
         for i, (name, data) in enumerate(players_by_winrate[:5], 1):
             rate = (data["games_won"] / data["games_played"]) * 100
             print(f"{i}. {name}: {rate:.1f}% ({data["games_won"]}/{data["games_played"]})")
 
     # Fastest players
     if players_by_speed:
-        print(f"\n{CYAN}⚡ Plus rapides:{RESET}")
+        print(f"\n{CYAN}⚡  Plus rapides:{RESET}")
         for i, (name, data) in enumerate(players_by_speed[:5], 1):
             print(f"{i}. {name}: {data["best_time"]:.1f}s")
 
@@ -289,7 +289,7 @@ def get_input_with_timer(prompt, timeout=10, game_state=None):
         if game_state["wrong_letters"] and game_state["difficulty"] == 0:
             print(f"Lettres fausses : {", ".join(sorted(game_state["wrong_letters"]))}")
         print(f"Vies restantes : {(RED + "♥ " + RESET) * game_state["lives"]}")
-        print(f"\n⏰ Temps écoulé ! Tu perds une vie.")
+        print(f"\n⏰  Temps écoulé ! Tu perds une vie.")
 
     return None
 
@@ -370,14 +370,14 @@ def play_hangman(player_name):
             end_time = time.time()
             game_time = end_time - start_time
 
-            print(f"\n🎉 BRAVO ! Tu as trouvé le mot : {secret_word}")
-            print(f"⏱️ Temps de jeu: {game_time:.1f} secondes")
-            print(f"❌ Lettres fausses: {len(wrong_letters)}")
+            print(f"\n🎉  BRAVO ! Tu as trouvé le mot : {secret_word}")
+            print(f"⏱️  Temps de jeu: {game_time:.1f} secondes")
+            print(f"❌  Lettres fausses: {len(wrong_letters)}")
 
             # Update stats
             player_stats = update_player_stats(player_name, True, len(secret_word), len(wrong_letters), game_time, difficulty)
 
-            print(f"\n📊 Tes stats: {player_stats["games_won"]} victoires sur {player_stats["games_played"]} parties")
+            print(f"\n📊  Tes stats: {player_stats["games_won"]} victoires sur {player_stats["games_played"]} parties")
             input("\nAppuie sur Entrée pour continuer...")
             return True
 
@@ -450,14 +450,14 @@ def play_hangman(player_name):
     end_time = time.time()
     game_time = end_time - start_time
 
-    print(f"\n💀 PERDU ! Le mot était : {secret_word}")
-    print(f"⏱️ Temps de jeu: {game_time:.1f} secondes")
-    print(f"❌ Lettres fausses: {len(wrong_letters)}")
+    print(f"\n💀  PERDU ! Le mot était : {secret_word}")
+    print(f"⏱️  Temps de jeu: {game_time:.1f} secondes")
+    print(f"❌  Lettres fausses: {len(wrong_letters)}")
 
     # Update stats
     player_stats = update_player_stats(player_name, False, len(secret_word), len(wrong_letters), game_time, difficulty)
 
-    print(f"\n📊 Tes stats: {player_stats["games_won"]} victoires sur {player_stats["games_played"]} parties")
+    print(f"\n📊  Tes stats: {player_stats["games_won"]} victoires sur {player_stats["games_played"]} parties")
     input("\nAppuie sur Entrée pour continuer...")
     return False
 
