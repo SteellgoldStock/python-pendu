@@ -1,3 +1,5 @@
+import random
+
 words = {
     "ABANDONNER", "ABORDER", "ABOUTIR", "ABRITER", "ABSOUDRE", "ABSTENIR", "ACCEPTER", "ACCOMPAGNER", "ACCOMPLIR", "ACCORDER",
     "ACCROCHER", "ACCUEILLIR", "ACHETER", "ACHEVER", "ACQUÉRIR", "ADAPTER", "ADDITIONNER", "ADHÉRER", "ADMETTRE", "ADOPTER",
@@ -99,3 +101,6 @@ words = {
     "CHAQUE", "CHARBON", "CHARGE", "CHASSE", "CHÂTEAU", "CHAT", "CHAUSSURE", "CHEMIN", "CHEMISE", "CHÈQUE",
     "CHEVAL", "CHEVEU", "CHIEN", "CHIFFRE", "CHIMIE", "CHOCOLAT", "CHOIX", "CHOSE", "CIEL", "CIGARETTE"
 }
+
+def choose_random_word():
+    return random.choice(list(words))

@@ -1,18 +1,13 @@
-import random
 import string
 import unicodedata
-from list import words
-
-from hangman_art import draw_hangman
+from list import choose_random_word
+# from hangman_art import draw_hangman
 
 def normalize_character(character):
     return unicodedata.normalize('NFD', character).encode('ascii', 'ignore').decode('ascii')
 
 def normalize_word(word):
     return ''.join(normalize_character(c) for c in word)
-
-def choose_random_word():
-    return random.choice(list(words))
 
 def display_masked_word(word, found_letters):
     displayed_word = ""
@@ -29,11 +24,8 @@ def display_masked_word(word, found_letters):
 
     return displayed_word
 
-
-
 def is_valid_letter(entry):
     return len(entry) == 1 and entry.isalpha()
-
 
 def word_is_complete(word, found_letters):
     """Check if all letters of the word have been found"""
@@ -57,7 +49,8 @@ def play_hangman():
     print(f"Word to guess: {len(secret_word)} letters")
 
     while errors < max_errors:
-        print(draw_hangman(errors))
+        print("=== HANGMAN GAME ===")
+        # print(draw_hangman(errors))
         print(f"Word: {display_masked_word(secret_word, found_letters)}")
 
         if wrong_letters:
@@ -73,6 +66,7 @@ def play_hangman():
 
         if not entry:
             print("Please type something!")
+            input("Press Enter to continue...")
             continue
 
         if len(entry) == 1:
@@ -95,14 +89,27 @@ def play_hangman():
                 print(f"✗ Wrong letter: {entry}")
 
         else:
-            if normalize_word(entry) == secret_word_normalized:
-                print(f"\n🎉 CONGRATULATIONS! You found the word: {secret_word}")
-                return True
-            else:
-                errors += 1
-                print(f"✗ That's not the right word!")
+            entry = entry[0]
 
-    print(draw_hangman(errors))
+            if not is_valid_letter(entry):
+                print("Please enter a valid letter!")
+                continue
+
+            normalized_letter = normalize_character(entry)
+
+            if normalized_letter in found_letters or normalized_letter in wrong_letters:
+                print("You already tried this letter!")
+                continue
+
+            if normalized_letter in secret_word_normalized:
+                found_letters.add(normalized_letter)
+                print(f"✓ Good letter: {entry} (only first letter taken)")
+            else:
+                wrong_letters.add(normalized_letter)
+                errors += 1
+                print(f"✗ Wrong letter: {entry} (only first letter taken)")
+
+    # print(draw_hangman(errors))
     print(f"\n💀 GAME OVER! The word was: {secret_word}")
     return False
 
