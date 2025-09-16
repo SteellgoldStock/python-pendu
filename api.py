@@ -10,11 +10,20 @@ import string
 import unicodedata
 import re
 import hashlib
+import redis
 from typing import Optional, Dict, List
+from dotenv import load_dotenv
+
+# Charger les variables d'environnement
+load_dotenv()
 from list import choose_random_word
 from hangman_art import draw_progress_bar
 
 app = FastAPI(title="Pendu Terminal API", version="1.0.0")
+
+# Redis connection
+REDIS_URL = os.getenv("REDIS_URL", "redis://localhost:6379")
+redis_client = redis.from_url(REDIS_URL, decode_responses=True)
 
 # Serve static files
 app.mount("/static", StaticFiles(directory="static"), name="static")
@@ -47,42 +56,97 @@ class GameResponse(BaseModel):
     game_time: Optional[float] = None
     secret_word: Optional[str] = None  # Le vrai mot pour les fins de partie
 
-# In-memory game storage (en production, utilisez Redis ou une DB)
+# In-memory game storage
 games = {}
-STATS_FILE = "stats.json"
-PLAYERS_FILE = "players.json"
+
+# Redis keys
+STATS_KEY = "pendu:stats"
+PLAYERS_KEY = "pendu:players"
 
 def load_stats():
-    if not os.path.exists(STATS_FILE):
-        return {}
+    """Charge les statistiques depuis Redis"""
     try:
-        with open(STATS_FILE, "r", encoding="utf-8") as f:
-            return json.load(f)
-    except (json.JSONDecodeError, FileNotFoundError):
+        data = redis_client.get(STATS_KEY)
+        if data:
+            return json.loads(data)
+        return {}
+    except Exception as e:
+        print(f"Erreur lors du chargement des stats depuis Redis: {e}")
         return {}
 
 def save_stats(stats):
+    """Sauvegarde les statistiques dans Redis"""
     try:
-        with open(STATS_FILE, "w", encoding="utf-8") as f:
-            json.dump(stats, f, ensure_ascii=False, indent=2)
+        redis_client.set(STATS_KEY, json.dumps(stats, ensure_ascii=False))
     except Exception as e:
-        print(f"Erreur lors de la sauvegarde des stats: {e}")
+        print(f"Erreur lors de la sauvegarde des stats dans Redis: {e}")
 
 def load_players():
-    if not os.path.exists(PLAYERS_FILE):
-        return {}
+    """Charge les données des joueurs depuis Redis"""
     try:
-        with open(PLAYERS_FILE, "r", encoding="utf-8") as f:
-            return json.load(f)
-    except (json.JSONDecodeError, FileNotFoundError):
+        data = redis_client.get(PLAYERS_KEY)
+        if data:
+            return json.loads(data)
+        return {}
+    except Exception as e:
+        print(f"Erreur lors du chargement des joueurs depuis Redis: {e}")
         return {}
 
 def save_players(players):
+    """Sauvegarde les données des joueurs dans Redis"""
     try:
-        with open(PLAYERS_FILE, "w", encoding="utf-8") as f:
-            json.dump(players, f, ensure_ascii=False, indent=2)
+        redis_client.set(PLAYERS_KEY, json.dumps(players, ensure_ascii=False))
     except Exception as e:
-        print(f"Erreur lors de la sauvegarde des joueurs: {e}")
+        print(f"Erreur lors de la sauvegarde des joueurs dans Redis: {e}")
+
+def migrate_json_to_redis():
+    """Migre les données JSON existantes vers Redis si elles existent"""
+    # Migrer les stats
+    stats_file = "stats.json"
+    if os.path.exists(stats_file):
+        try:
+            with open(stats_file, "r", encoding="utf-8") as f:
+                stats_data = json.load(f)
+
+            # Vérifier si les données n'existent pas déjà dans Redis
+            if not redis_client.exists(STATS_KEY):
+                save_stats(stats_data)
+                print(f"✅ Migration des stats: {len(stats_data)} joueurs migrés vers Redis")
+            else:
+                print("⚠️ Stats déjà présentes dans Redis, migration ignorée")
+
+        except Exception as e:
+            print(f"❌ Erreur lors de la migration des stats: {e}")
+
+    # Migrer les joueurs
+    players_file = "players.json"
+    if os.path.exists(players_file):
+        try:
+            with open(players_file, "r", encoding="utf-8") as f:
+                players_data = json.load(f)
+
+            # Vérifier si les données n'existent pas déjà dans Redis
+            if not redis_client.exists(PLAYERS_KEY):
+                save_players(players_data)
+                print(f"✅ Migration des joueurs: {len(players_data)} comptes migrés vers Redis")
+            else:
+                print("⚠️ Joueurs déjà présents dans Redis, migration ignorée")
+
+        except Exception as e:
+            print(f"❌ Erreur lors de la migration des joueurs: {e}")
+
+# Migration automatique au démarrage
+try:
+    # Test de connexion Redis
+    redis_client.ping()
+    print("✅ Connexion Redis établie")
+
+    # Migration des données JSON existantes
+    migrate_json_to_redis()
+
+except Exception as e:
+    print(f"❌ Erreur de connexion Redis: {e}")
+    print("L'application ne pourra pas fonctionner sans Redis")
 
 def hash_password(password: str) -> str:
     """Hash le mot de passe avec SHA-256"""
@@ -176,7 +240,7 @@ def validate_player_name(name: str) -> bool:
 
     return True
 
-def update_player_stats(player_name, won, word_length, wrong_letters_count, game_time, difficulty, hints_used=0, secret_word=""):
+def update_player_stats(player_name, won, word_length, wrong_letters_count, game_time, difficulty, hints_used=0, secret_word="", infinite_stats=None, is_infinite_mode=False):
     stats = load_stats()
 
     if player_name not in stats:
@@ -197,7 +261,17 @@ def update_player_stats(player_name, won, word_length, wrong_letters_count, game
             "achievements": [],
             "hints_used": 0,
             "words_history": {"won": [], "lost": []},
-            "total_hints": 0
+            "total_hints": 0,
+            "infinite_mode_stats": {
+                "games_played": 0,
+                "best_words_found": 0,
+                "total_words_found": 0,
+                "average_words_found": 0.0,
+                "max_lives_reached": 0,
+                "total_lives_gained": 0,
+                "best_session_time": None,
+                "total_session_time": 0
+            }
         }
 
     player_stats = stats[player_name]
@@ -215,51 +289,104 @@ def update_player_stats(player_name, won, word_length, wrong_letters_count, game
             "total_hints": 0
         })
 
-    player_stats["games_played"] += 1
-    player_stats["total_wrong_letters"] += wrong_letters_count
-    player_stats["total_time"] += game_time
+    # Initialize infinite mode stats for existing players
+    if "infinite_mode_stats" not in player_stats:
+        player_stats["infinite_mode_stats"] = {
+            "games_played": 0,
+            "best_words_found": 0,
+            "total_words_found": 0,
+            "average_words_found": 0.0,
+            "max_lives_reached": 0,
+            "total_lives_gained": 0,
+            "best_session_time": None,
+            "total_session_time": 0
+        }
+
+    # Ne pas polluer les stats normales avec le mode infini (sauf pour les stats individuelles du mode infini)
+    if not is_infinite_mode:
+        player_stats["games_played"] += 1
+        player_stats["total_wrong_letters"] += wrong_letters_count
+        player_stats["total_time"] += game_time
     player_stats["total_hints"] += hints_used
     player_stats["last_played"] = datetime.datetime.now().isoformat()
     player_stats["last_game_perfect"] = (wrong_letters_count == 0 and won)
 
     difficulty_names = ["easy", "middle", "hard"]
-    if 0 <= difficulty < len(difficulty_names):
-        player_stats["difficulty_stats"][difficulty_names[difficulty]] += 1
 
-    if won:
-        player_stats["games_won"] += 1
-        player_stats["total_words_found"] += 1
-        player_stats["longest_word"] = max(player_stats["longest_word"], word_length)
+    # Ne pas polluer les stats normales avec le mode infini
+    if not is_infinite_mode:
+        if 0 <= difficulty < len(difficulty_names):
+            player_stats["difficulty_stats"][difficulty_names[difficulty]] += 1
 
-        # Update streaks
-        player_stats["current_streak"] += 1
-        player_stats["best_streak"] = max(player_stats["best_streak"], player_stats["current_streak"])
+        if won:
+            player_stats["games_won"] += 1
+            player_stats["total_words_found"] += 1
+            player_stats["longest_word"] = max(player_stats["longest_word"], word_length)
 
-        if secret_word:
-            player_stats["words_history"]["won"].append({
-                "word": secret_word,
-                "date": datetime.datetime.now().isoformat(),
-                "difficulty": difficulty_names[difficulty],
-                "time": game_time,
-                "hints_used": hints_used
-            })
+            # Update streaks
+            player_stats["current_streak"] += 1
+            player_stats["best_streak"] = max(player_stats["best_streak"], player_stats["current_streak"])
 
-        if player_stats["best_time"] is None or game_time < player_stats["best_time"]:
-            player_stats["best_time"] = game_time
-    else:
-        # Reset streaks on loss
-        player_stats["current_streak"] = 0
-        for diff in difficulty_names:
-            player_stats["difficulty_streaks"][diff] = 0
+            if secret_word:
+                player_stats["words_history"]["won"].append({
+                    "word": secret_word,
+                    "date": datetime.datetime.now().isoformat(),
+                    "difficulty": difficulty_names[difficulty],
+                    "time": game_time,
+                    "hints_used": hints_used
+                })
 
-        if secret_word:
-            player_stats["words_history"]["lost"].append({
-                "word": secret_word,
-                "date": datetime.datetime.now().isoformat(),
-                "difficulty": difficulty_names[difficulty],
-                "time": game_time,
-                "hints_used": hints_used
-            })
+            if player_stats["best_time"] is None or game_time < player_stats["best_time"]:
+                player_stats["best_time"] = game_time
+        else:
+            # Reset streaks on loss
+            player_stats["current_streak"] = 0
+            for diff in difficulty_names:
+                player_stats["difficulty_streaks"][diff] = 0
+
+            if secret_word:
+                player_stats["words_history"]["lost"].append({
+                    "word": secret_word,
+                    "date": datetime.datetime.now().isoformat(),
+                    "difficulty": difficulty_names[difficulty],
+                    "time": game_time,
+                    "hints_used": hints_used
+                })
+
+    # Traitement des statistiques du mode infini
+    if infinite_stats:
+        infinite_mode_stats = player_stats["infinite_mode_stats"]
+
+        # Si c'est la fin d'une session infinie (défaite)
+        if not won and infinite_stats.get("is_end_of_session", False):
+            infinite_mode_stats["games_played"] += 1
+            words_found = infinite_stats.get("words_found", 0)
+            lives_gained = infinite_stats.get("lives_gained", 0)
+            max_lives = infinite_stats.get("max_lives", 0)
+            session_time = infinite_stats.get("session_time", 0)
+
+            # Meilleur nombre de mots trouvés
+            infinite_mode_stats["best_words_found"] = max(infinite_mode_stats["best_words_found"], words_found)
+
+            # Total de mots trouvés
+            infinite_mode_stats["total_words_found"] += words_found
+
+            # Calcul de la moyenne
+            if infinite_mode_stats["games_played"] > 0:
+                infinite_mode_stats["average_words_found"] = infinite_mode_stats["total_words_found"] / infinite_mode_stats["games_played"]
+
+            # Maximum de vies atteint
+            infinite_mode_stats["max_lives_reached"] = max(infinite_mode_stats["max_lives_reached"], max_lives)
+
+            # Total de vies gagnées
+            infinite_mode_stats["total_lives_gained"] += lives_gained
+
+            # Meilleur temps de session
+            if infinite_mode_stats["best_session_time"] is None or session_time > infinite_mode_stats["best_session_time"]:
+                infinite_mode_stats["best_session_time"] = session_time
+
+            # Temps total de session
+            infinite_mode_stats["total_session_time"] += session_time
 
     save_stats(stats)
     return player_stats
@@ -343,6 +470,7 @@ async def start_game(game_data: GameStart):
         "difficulty": difficulty_level,
         "difficulty_name": game_data.difficulty,
         "max_errors": max_errors_map[game_data.difficulty],
+        "lives": max_errors_map[game_data.difficulty],  # Nouvelle source de vérité
         "errors": 0,
         "hints_used": 0,
         "start_time": datetime.datetime.now().timestamp(),
@@ -372,13 +500,13 @@ async def make_guess(guess_data: GameGuess):
 
     # Handle hint request
     if guess_data.hint_requested:
-        if game["errors"] >= game["max_errors"] - 1:
+        if game["lives"] <= 1:  # Doit avoir au moins 1 vie après l'indice
             return GameResponse(
                 game_id=guess_data.game_id,
                 status="playing",
                 word_display=display_masked_word(game["secret_word"], game["found_letters"]),
                 wrong_letters=list(game["wrong_letters"]),
-                lives=game["max_errors"] - game["errors"],
+                lives=game["lives"],
                 max_lives=game["max_errors"],
                 message="❌ Tu n'as pas assez de vies pour un indice !",
                 hints_used=game["hints_used"]
@@ -387,7 +515,8 @@ async def make_guess(guess_data: GameGuess):
         hint_letter, original_letter = get_hint(game["secret_word"], game["found_letters"])
         if hint_letter:
             game["found_letters"].add(hint_letter)
-            game["errors"] += 1
+            game["lives"] -= 1  # Utiliser lives directement
+            game["errors"] += 1  # Maintenir errors pour la cohérence
             game["hints_used"] += 1
 
             return GameResponse(
@@ -395,7 +524,7 @@ async def make_guess(guess_data: GameGuess):
                 status="playing",
                 word_display=display_masked_word(game["secret_word"], game["found_letters"]),
                 wrong_letters=list(game["wrong_letters"]),
-                lives=game["max_errors"] - game["errors"],
+                lives=game["lives"],
                 max_lives=game["max_errors"],
                 message=f"💡 INDICE: La lettre '{original_letter}' est dans le mot ! (coût: 1 vie)",
                 hints_used=game["hints_used"]
@@ -409,7 +538,7 @@ async def make_guess(guess_data: GameGuess):
             status="playing",
             word_display=display_masked_word(game["secret_word"], game["found_letters"]),
             wrong_letters=list(game["wrong_letters"]),
-            lives=game["max_errors"] - game["errors"],
+            lives=game["lives"],
             max_lives=game["max_errors"],
             message="Tu dois taper quelque chose !",
             hints_used=game["hints_used"]
@@ -423,7 +552,7 @@ async def make_guess(guess_data: GameGuess):
                 status="playing",
                 word_display=display_masked_word(game["secret_word"], game["found_letters"]),
                 wrong_letters=list(game["wrong_letters"]),
-                lives=game["max_errors"] - game["errors"],
+                lives=game["lives"],
                 max_lives=game["max_errors"],
                 message="Merci d'entrer une lettre valide !",
                 hints_used=game["hints_used"]
@@ -437,7 +566,7 @@ async def make_guess(guess_data: GameGuess):
                 status="playing",
                 word_display=display_masked_word(game["secret_word"], game["found_letters"]),
                 wrong_letters=list(game["wrong_letters"]),
-                lives=game["max_errors"] - game["errors"],
+                lives=game["lives"],
                 max_lives=game["max_errors"],
                 message="Tu as déjà essayé cette lettre !",
                 hints_used=game["hints_used"]
@@ -448,8 +577,38 @@ async def make_guess(guess_data: GameGuess):
             message = f"✓ Bonne lettre : {guess}"
         else:
             game["wrong_letters"].add(normalized_letter)
-            game["errors"] += 1
+            game["lives"] -= 1  # Décrémenter les vies directement
+            game["errors"] += 1  # Maintenir errors pour la cohérence
             message = f"✗ Mauvaise lettre : {guess}"
+
+            # VÉRIFICATION IMMÉDIATE DES VIES APRÈS ERREUR
+            if game["lives"] <= 0:
+                game["status"] = "lost"
+                end_time = datetime.datetime.now().timestamp()
+                game_time = end_time - game["start_time"]
+
+                # Update stats
+                player_stats = update_player_stats(
+                    game["player_name"], False, len(game["secret_word"]),
+                    len(game["wrong_letters"]), game_time, game["difficulty"],
+                    game["hints_used"], game["secret_word"]
+                )
+
+                progress_art = draw_progress_bar(game["errors"], game["max_errors"], game["difficulty"])
+
+                return GameResponse(
+                    game_id=guess_data.game_id,
+                    status="lost",
+                    word_display=display_masked_word(game["secret_word"], game["found_letters"]),
+                    wrong_letters=list(game["wrong_letters"]),
+                    lives=0,
+                    max_lives=game["max_errors"],
+                    message=f"💀 PERDU ! Le mot était : {game['secret_word']} (Temps: {game_time:.1f}s)",
+                    progress_art=progress_art,
+                    hints_used=game["hints_used"],
+                    game_time=game_time,
+                    secret_word=game["secret_word"]
+                )
 
     else:
         # Whole word guess
@@ -472,7 +631,7 @@ async def make_guess(guess_data: GameGuess):
                 status="won",
                 word_display=game["secret_word"],
                 wrong_letters=list(game["wrong_letters"]),
-                lives=game["max_errors"] - game["errors"],
+                lives=game["lives"],
                 max_lives=game["max_errors"],
                 message=f"🎉 BRAVO ! Tu as trouvé le mot entier : {game['secret_word']} (Temps: {game_time:.1f}s)",
                 hints_used=game["hints_used"],
@@ -480,8 +639,38 @@ async def make_guess(guess_data: GameGuess):
                 secret_word=game["secret_word"]
             )
         else:
-            game["errors"] += 1
+            game["lives"] -= 1  # Décrémenter les vies directement
+            game["errors"] += 1  # Maintenir errors pour la cohérence
             message = f"✗ Mauvaise proposition de mot : \"{guess}\""
+
+            # VÉRIFICATION IMMÉDIATE DES VIES APRÈS ERREUR DE MOT
+            if game["lives"] <= 0:
+                game["status"] = "lost"
+                end_time = datetime.datetime.now().timestamp()
+                game_time = end_time - game["start_time"]
+
+                # Update stats
+                player_stats = update_player_stats(
+                    game["player_name"], False, len(game["secret_word"]),
+                    len(game["wrong_letters"]), game_time, game["difficulty"],
+                    game["hints_used"], game["secret_word"]
+                )
+
+                progress_art = draw_progress_bar(game["errors"], game["max_errors"], game["difficulty"])
+
+                return GameResponse(
+                    game_id=guess_data.game_id,
+                    status="lost",
+                    word_display=display_masked_word(game["secret_word"], game["found_letters"]),
+                    wrong_letters=list(game["wrong_letters"]),
+                    lives=0,
+                    max_lives=game["max_errors"],
+                    message=f"💀 PERDU ! Le mot était : {game['secret_word']} (Temps: {game_time:.1f}s)",
+                    progress_art=progress_art,
+                    hints_used=game["hints_used"],
+                    game_time=game_time,
+                    secret_word=game["secret_word"]
+                )
 
     # Check win condition
     if word_is_complete(game["secret_word"], game["found_letters"]):
@@ -501,7 +690,7 @@ async def make_guess(guess_data: GameGuess):
             status="won",
             word_display=game["secret_word"],
             wrong_letters=list(game["wrong_letters"]),
-            lives=game["max_errors"] - game["errors"],
+            lives=game["lives"],
             max_lives=game["max_errors"],
             message=f"🎉 BRAVO ! Tu as trouvé le mot : {game['secret_word']} (Temps: {game_time:.1f}s)",
             hints_used=game["hints_used"],
@@ -509,8 +698,8 @@ async def make_guess(guess_data: GameGuess):
             secret_word=game["secret_word"]
         )
 
-    # Check lose condition
-    if game["errors"] >= game["max_errors"]:
+    # Check lose condition (cette vérification ne devrait normalement plus être nécessaire)
+    if game["lives"] <= 0:
         game["status"] = "lost"
         end_time = datetime.datetime.now().timestamp()
         game_time = end_time - game["start_time"]
@@ -543,7 +732,7 @@ async def make_guess(guess_data: GameGuess):
         status="playing",
         word_display=display_masked_word(game["secret_word"], game["found_letters"]),
         wrong_letters=list(game["wrong_letters"]),
-        lives=game["max_errors"] - game["errors"],
+        lives=game["lives"],
         max_lives=game["max_errors"],
         message=message,
         hints_used=game["hints_used"]
@@ -555,6 +744,38 @@ async def get_player_stats(player_name: str):
     if player_name not in stats:
         raise HTTPException(status_code=404, detail="Player not found")
     return stats[player_name]
+
+@app.post("/api/infinite/stats")
+async def update_infinite_stats(infinite_data: dict):
+    """Enregistre les statistiques de fin de session en mode infini"""
+    player_name = infinite_data.get("player_name")
+    password = infinite_data.get("password")
+
+    # Vérification de l'authentification
+    if not verify_player(player_name, password):
+        raise HTTPException(status_code=401, detail="Authentification requise")
+
+    # Préparer les stats du mode infini
+    infinite_stats = {
+        "is_end_of_session": True,
+        "words_found": infinite_data.get("words_found", 0),
+        "lives_gained": infinite_data.get("lives_gained", 0),
+        "max_lives": infinite_data.get("max_lives", 0),
+        "session_time": infinite_data.get("session_time", 0)
+    }
+
+    # Mettre à jour les stats avec des valeurs factices pour le mot final
+    update_player_stats(
+        player_name=player_name,
+        won=False,  # Défaite en mode infini
+        word_length=1,  # Pas important pour les stats infini
+        wrong_letters_count=0,  # Pas important pour les stats infini
+        game_time=0,  # Pas important pour les stats infini
+        difficulty=0,  # Pas important pour les stats infini
+        infinite_stats=infinite_stats
+    )
+
+    return {"status": "success", "message": "Statistiques du mode infini enregistrées"}
 
 @app.get("/api/leaderboard")
 async def get_leaderboard():

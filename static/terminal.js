@@ -7,6 +7,8 @@ class TerminalPendu {
         this.playerPassword = null;
         this.isAuthenticated = false;
         this.gameStartTime = null;
+        this.sessionStartTime = null; // Pour le mode infini
+        this.maxLivesReached = 0; // Pour tracker le max de vies atteint
         this.timer = null;
         this.timeRemaining = 0;
         this.gameState = 'login'; // 'login', 'menu', 'playing', 'waiting_input'
@@ -63,9 +65,9 @@ class TerminalPendu {
     showLoginScreen() {
         this.clearTerminal();
         const loginScreen = `
-<span class="success">╔═══════════════════════════════════════╗</span>
-<span class="success">║      TERMINAL PENDU - CONNEXION       ║</span>
-<span class="success">╚═══════════════════════════════════════╝</span>
+<span class="success">════════════════════════════════════════</span>
+<span class="success">    TERMINAL PENDU - CONNEXION</span>
+<span class="success">════════════════════════════════════════</span>
 
 <span class="warning">🔒 Authentification requise pour jouer</span>
 <span class="info">Les comptes sont protégés contre l'usurpation d'identité</span>
@@ -453,6 +455,12 @@ class TerminalPendu {
             this.currentGame.wrong_letters = [];
             this.gameStartTime = Date.now();
 
+            // Initialiser le temps de session pour le mode infini
+            if (infiniteMode) {
+                this.sessionStartTime = Date.now();
+                this.maxLivesReached = this.currentGame.lives;
+            }
+
             this.printOutput(`Mot à deviner : ${gameData.word_display.replace(/_/g, '').length} lettres`);
             if (timerDelay) {
                 this.printOutput('<span class="cyan">💡 Attention : Timer activé !</span>');
@@ -486,14 +494,15 @@ class TerminalPendu {
 
                 if (input === null) {
                     // Timer expiré
-                    this.currentGame.errors++;
-                    this.currentGame.lives--;
+                    this.currentGame.lives--;  // Décrémenter les vies directement
+                    this.currentGame.errors++;  // Maintenir errors pour la cohérence
                     this.clearTerminal();
                     this.displayGameState();
                     this.printOutput('\n⏰  Temps écoulé ! Tu perds une vie.');
                     await this.waitForInput('Appuie sur Entrée pour continuer...');
 
-                    if (this.currentGame.errors >= this.currentGame.max_errors) {
+                    // Vérifier la défaite avec les vies
+                    if (this.currentGame.lives <= 0) {
                         await this.endGame(false);
                         return;
                     }
@@ -509,12 +518,6 @@ class TerminalPendu {
 
     displayGameState() {
         this.printOutput(' ');
-
-        // Afficher l'art de progression si des erreurs
-        if (this.currentGame.errors > 0) {
-            this.printOutput(`<span class="error">${this.getProgressBar()}</span>`);
-        }
-
         this.printOutput(`Mot : ${this.currentGame.word_display}`);
 
         // Afficher lettres fausses seulement en mode easy
@@ -523,16 +526,13 @@ class TerminalPendu {
             this.printOutput(`Lettres fausses : ${wrongDisplay}`);
         }
 
+        // Afficher les vies restantes (comme dans le script Python)
+        const hearts = '<span class="error">♥ </span>'.repeat(this.currentGame.lives);
+        this.printOutput(`Vies restantes : ${hearts}`);
+
         if (this.currentGame.hints_used > 0) {
             this.printOutput(`<span class="cyan">💡  Indices utilisés : ${this.currentGame.hints_used}</span>`);
         }
-    }
-
-    getProgressBar() {
-        const progress = this.currentGame.errors;
-        const max = this.currentGame.max_errors;
-        const bars = '█'.repeat(progress) + '░'.repeat(max - progress);
-        return `[${bars}] ${progress}/${max}`;
     }
 
     async waitForInput(prompt, timeout = null) {
@@ -578,16 +578,11 @@ class TerminalPendu {
         if (!this.currentGame) return;
 
         this.clearTerminal();
-        this.printOutput(' ');
-        this.printOutput(`Mot : ${this.currentGame.word_display}`);
+        this.displayGameState();
 
-        if (this.currentGame.wrong_letters.length > 0 && this.currentGame.difficulty_level === 0) {
-            this.printOutput('Lettres fausses : ' + this.currentGame.wrong_letters.join(', '));
-        }
-
-        const hearts = '♥ '.repeat(this.currentGame.lives);
+        // Ajouter juste le timer à l'affichage des vies existant
         const timerColor = this.timeRemaining <= 5 ? 'error' : 'success';
-        this.printOutput(`Vies restantes : <span class="error">${hearts}</span>(<span class="${timerColor}">⏰ ${this.timeRemaining}s</span>)`);
+        this.printOutput(`(<span class="${timerColor}">⏰ ${this.timeRemaining}s</span>)`);
         this.printOutput(`\n${prompt}`);
     }
 
@@ -598,7 +593,7 @@ class TerminalPendu {
 
         // Gérer la demande d'indice
         if (entry === 'indice') {
-            if (this.currentGame.errors >= this.currentGame.max_errors - 1) {
+            if (this.currentGame.lives <= 1) {  // Doit avoir au moins 1 vie après l'indice
                 this.printOutput('<span class="error">❌ Tu n\'as pas assez de vies pour un indice !</span>');
                 await this.waitForInput('Appuie sur Entrée pour continuer...');
                 return;
@@ -674,10 +669,29 @@ class TerminalPendu {
     updateGameState(result) {
         this.currentGame.word_display = result.word_display;
         this.currentGame.wrong_letters = result.wrong_letters || [];
-        this.currentGame.lives = result.lives;
+
+        // En mode infini, conserver les vies accumulées (ne pas écraser par la réponse serveur)
+        if (!this.currentGame.infinite_mode) {
+            // Mode normal : utiliser directement les vies du serveur
+            this.currentGame.lives = result.lives;
+            this.currentGame.errors = this.currentGame.max_errors - result.lives;
+        } else {
+            // Mode infini : ajuster les vies selon la différence serveur/client
+            const serverLives = result.lives;
+            const expectedClientLives = this.currentGame.max_errors - (this.currentGame.max_errors - serverLives);
+
+            // Si le serveur indique moins de vies, le joueur en a perdu
+            if (serverLives < expectedClientLives) {
+                const livesLost = expectedClientLives - serverLives;
+                this.currentGame.lives -= livesLost;
+            }
+
+            // Synchroniser les erreurs
+            this.currentGame.errors = this.currentGame.max_errors - serverLives;
+        }
+
         this.currentGame.status = result.status;
         this.currentGame.hints_used = result.hints_used || 0;
-        this.currentGame.errors = this.currentGame.max_errors - result.lives;
         if (result.secret_word) {
             this.currentGame.secret_word = result.secret_word;
         }
@@ -697,13 +711,17 @@ class TerminalPendu {
                 this.currentGame.lives++;
                 this.currentGame.words_found++;
                 this.currentGame.total_lives_gained++;
-                this.printOutput(`<span class="success">🔄 MODE INFINI : +1 vie ! (Vies restantes : ${this.currentGame.lives})</span>`);
+
+                // Mettre à jour le max de vies atteint
+                this.maxLivesReached = Math.max(this.maxLivesReached, this.currentGame.lives);
+
+                const hearts = '<span class="error">♥ </span>'.repeat(this.currentGame.lives);
+                this.printOutput(`<span class="success">🔄 MODE INFINI : +1 vie ! (Vies restantes : ${hearts})</span>`);
                 this.printOutput(`<span class="info">📊 Mots trouvés : ${this.currentGame.words_found} | Vies gagnées : ${this.currentGame.total_lives_gained}</span>`);
             }
         } else {
             await this.showLoadingAnimation('Défaite', 1);
             this.clearTerminal();
-            this.printOutput(`<span class="error">${this.getProgressBar()}</span>`);
             this.printOutput(`\n<span class="bright-red">💀  PERDU ! Le mot était : ${secretWord}</span>`);
 
             if (this.currentGame.infinite_mode) {
@@ -711,6 +729,9 @@ class TerminalPendu {
                 this.printOutput(`<span class="info">📊 Performance finale :</span>`);
                 this.printOutput(`<span class="info">   • Mots trouvés : ${this.currentGame.words_found}</span>`);
                 this.printOutput(`<span class="info">   • Vies gagnées : ${this.currentGame.total_lives_gained}</span>`);
+
+                // Enregistrer les statistiques du mode infini
+                await this.saveInfiniteStats();
             }
         }
 
@@ -828,6 +849,8 @@ class TerminalPendu {
                 this.currentGame.infinite_mode = true;
                 this.currentGame.words_found = 0;
                 this.currentGame.total_lives_gained = 0;
+                this.sessionStartTime = Date.now();
+                this.maxLivesReached = this.currentGame.lives;
             }
 
             this.gameStartTime = Date.now();
@@ -835,7 +858,8 @@ class TerminalPendu {
 
             if (savedInfiniteMode) {
                 this.printOutput(`<span class="cyan">🔄 NOUVEAU JEU - MODE INFINI</span>`);
-                this.printOutput(`<span class="info">Vies de départ : ${this.currentGame.lives}</span>\n`);
+                const hearts = '<span class="error">♥ </span>'.repeat(this.currentGame.lives);
+                this.printOutput(`<span class="info">Vies de départ : ${hearts}</span>\n`);
             } else {
                 this.printOutput(`<span class="success">🎮 NOUVEAU JEU</span>\n`);
             }
@@ -861,8 +885,8 @@ class TerminalPendu {
 
     async startNewWordInfinite() {
         try {
-            // Conserver les paramètres actuels
-            const savedLives = this.currentGame.lives;
+            // Conserver les paramètres actuels (APRÈS avoir gagné +1 vie)
+            const savedLives = this.currentGame.lives; // Les vies incluent déjà le +1 de la victoire
             const savedWordsFound = this.currentGame.words_found;
             const savedTotalLivesGained = this.currentGame.total_lives_gained;
             const savedMaxErrors = this.currentGame.max_errors;
@@ -889,8 +913,8 @@ class TerminalPendu {
             const gameData = await response.json();
             this.currentGame = gameData;
 
-            // Restaurer les paramètres sauvés
-            this.currentGame.lives = savedLives;
+            // Restaurer les paramètres sauvés (en conservant les vies correctes)
+            this.currentGame.lives = savedLives; // Garde les vies actuelles (avec le +1)
             this.currentGame.words_found = savedWordsFound;
             this.currentGame.total_lives_gained = savedTotalLivesGained;
             this.currentGame.max_errors = savedMaxErrors;
@@ -907,7 +931,8 @@ class TerminalPendu {
 
             this.clearTerminal();
             this.printOutput(`<span class="cyan">🔄 NOUVEAU MOT - MODE INFINI</span>`);
-            this.printOutput(`<span class="info">📊 Mots trouvés : ${this.currentGame.words_found} | Vies restantes : ${this.currentGame.lives}</span>\n`);
+            const hearts = '<span class="error">♥ </span>'.repeat(this.currentGame.lives);
+            this.printOutput(`<span class="info">📊 Mots trouvés : ${this.currentGame.words_found} | Vies restantes : ${hearts}</span>\n`);
 
             this.printOutput(`Mot à deviner : ${gameData.word_display.replace(/_/g, '').length} lettres`);
 
@@ -1066,6 +1091,7 @@ class TerminalPendu {
             }
 
             const stats = await response.json();
+            this.clearTerminal();
 
             this.printOutput(`<span class="info">═══════════════════════════════════════</span>`);
             this.printOutput(`<span class="info">       STATISTIQUES DE ${playerName.toUpperCase()}       </span>`);
@@ -1107,6 +1133,26 @@ class TerminalPendu {
             this.printOutput(`🔥  Série actuelle: ${currentStreak}`);
             this.printOutput(`🏆  Meilleure série: ${bestStreak}`);
             this.printOutput(`💡  Indices utilisés: ${totalHints}`);
+
+            // Statistiques du mode infini
+            const infiniteStats = stats.infinite_mode_stats || {};
+            if (infiniteStats.games_played > 0) {
+                this.printOutput(`\n<span class="cyan">🔄  Statistiques MODE INFINI:</span>`);
+                this.printOutput(`  Sessions jouées: ${infiniteStats.games_played}`);
+                this.printOutput(`  Meilleur score: ${infiniteStats.best_words_found} mots trouvés`);
+                if (infiniteStats.average_words_found > 0) {
+                    this.printOutput(`  Moyenne de mots: ${infiniteStats.average_words_found.toFixed(1)} par session`);
+                }
+                this.printOutput(`  Max de vies atteint: ${infiniteStats.max_lives_reached}`);
+                this.printOutput(`  Total vies gagnées: ${infiniteStats.total_lives_gained}`);
+                if (infiniteStats.best_session_time) {
+                    this.printOutput(`  Meilleure session: ${infiniteStats.best_session_time.toFixed(1)}s`);
+                }
+                if (infiniteStats.total_session_time > 0 && infiniteStats.games_played > 0) {
+                    const avgSessionTime = (infiniteStats.total_session_time / infiniteStats.games_played).toFixed(1);
+                    this.printOutput(`  Temps moyen session: ${avgSessionTime}s`);
+                }
+            }
 
             this.printOutput(`\n<span class="warning">Répartition par difficulté:</span>`);
             const difficultyStats = stats.difficulty_stats || {};
@@ -1185,6 +1231,35 @@ class TerminalPendu {
 
     scrollToBottom() {
         this.output.scrollTop = this.output.scrollHeight;
+    }
+
+    async saveInfiniteStats() {
+        if (!this.currentGame.infinite_mode || !this.sessionStartTime) return;
+
+        try {
+            const sessionTime = (Date.now() - this.sessionStartTime) / 1000;
+
+            const response = await fetch('/api/infinite/stats', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    player_name: this.playerName,
+                    password: this.playerPassword,
+                    words_found: this.currentGame.words_found || 0,
+                    lives_gained: this.currentGame.total_lives_gained || 0,
+                    max_lives: this.maxLivesReached || 0,
+                    session_time: sessionTime
+                })
+            });
+
+            if (!response.ok) {
+                console.warn('Erreur lors de la sauvegarde des stats du mode infini');
+            }
+        } catch (error) {
+            console.warn('Erreur lors de la sauvegarde des stats du mode infini:', error);
+        }
     }
 }
 
