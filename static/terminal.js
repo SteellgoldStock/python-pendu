@@ -81,7 +81,6 @@ class TerminalPendu {
     }
 
     showMenu() {
-        console.log('showMenu() called');
         this.clearTerminal();
         this.selectedMenuItem = 0;
         this.menuItems = [
@@ -148,7 +147,6 @@ class TerminalPendu {
                         break;
                     case 'Enter':
                         e.preventDefault();
-                        console.log('Enter key pressed in menu');
                         this.executeMenuSelection();
                         break;
                 }
@@ -174,13 +172,11 @@ class TerminalPendu {
 
     executeMenuSelection() {
         if (this.gameState !== 'menu') {
-            console.log('executeMenuSelection called but not in menu state:', this.gameState);
             return;
         }
 
         this.cleanupMenuNavigation();
         const selectedItem = this.menuItems[this.selectedMenuItem];
-        console.log('Executing menu selection:', selectedItem.command);
         this.input.value = selectedItem.command;
         this.processCommand();
     }
@@ -364,18 +360,44 @@ class TerminalPendu {
     }
 
     async startGame() {
-        console.log('startGame() called - this should not happen automatically!');
-        console.trace('startGame called from:');
         this.clearTerminal();
         this.printOutput(`<span class="success">Bonjour ${this.playerName} ! 🎮</span>\n`);
 
         // Demander la difficulté
-        const difficulty = await this.waitForInput('Choisis une difficulté (f-easy/m-middle/d-hard) : ');
+        const difficulty = await this.waitForInput('Choisis une difficulté (f-easy/m-middle/d-hard/i-infini) : ');
 
-        let maxErrors, difficultyLevel, timerDelay;
+        let maxErrors, difficultyLevel, timerDelay, infiniteMode = false;
         const diffStr = difficulty.toLowerCase();
 
-        if (diffStr === 'easy' || diffStr === 'f') {
+        if (diffStr === 'infini' || diffStr === 'infinite' || diffStr === 'i') {
+            // Mode infini - demander la sous-difficulté
+            this.printOutput('\n🔄 <span class="cyan">MODE INFINI ACTIVÉ !</span>');
+            this.printOutput('<span class="info">Gagne +1 vie à chaque mot trouvé, continue jusqu\'à épuisement !</span>\n');
+
+            const subDifficulty = await this.waitForInput('Choisis la difficulté de base (f-easy/m-middle/d-hard) : ');
+            const subDiffStr = subDifficulty.toLowerCase();
+
+            infiniteMode = true;
+
+            if (subDiffStr === 'easy' || subDiffStr === 'f') {
+                maxErrors = 10;
+                difficultyLevel = 0;
+                timerDelay = null;
+            } else if (subDiffStr === 'middle' || subDiffStr === 'm') {
+                maxErrors = 6;
+                difficultyLevel = 1;
+                timerDelay = 10;
+            } else if (subDiffStr === 'hard' || subDiffStr === 'd') {
+                maxErrors = 3;
+                difficultyLevel = 2;
+                timerDelay = 5;
+            } else {
+                // Défaut : facile
+                maxErrors = 10;
+                difficultyLevel = 0;
+                timerDelay = null;
+            }
+        } else if (diffStr === 'easy' || diffStr === 'f') {
             maxErrors = 10;
             difficultyLevel = 0;
             timerDelay = null; // Pas de timer
@@ -425,6 +447,9 @@ class TerminalPendu {
             this.currentGame.errors = 0;
             this.currentGame.hints_used = 0;
             this.currentGame.found_letters = [];
+            this.currentGame.infinite_mode = infiniteMode;
+            this.currentGame.words_found = 0;
+            this.currentGame.total_lives_gained = 0;
             this.currentGame.wrong_letters = [];
             this.gameStartTime = Date.now();
 
@@ -666,11 +691,27 @@ class TerminalPendu {
             await this.showLoadingAnimation('Victoire', 1);
             this.clearTerminal();
             this.printOutput(`\n<span class="bright-green">🎉  BRAVO ! Tu as trouvé le mot : ${secretWord}</span>`);
+
+            // Mode infini : gagner +1 vie
+            if (this.currentGame.infinite_mode) {
+                this.currentGame.lives++;
+                this.currentGame.words_found++;
+                this.currentGame.total_lives_gained++;
+                this.printOutput(`<span class="success">🔄 MODE INFINI : +1 vie ! (Vies restantes : ${this.currentGame.lives})</span>`);
+                this.printOutput(`<span class="info">📊 Mots trouvés : ${this.currentGame.words_found} | Vies gagnées : ${this.currentGame.total_lives_gained}</span>`);
+            }
         } else {
             await this.showLoadingAnimation('Défaite', 1);
             this.clearTerminal();
             this.printOutput(`<span class="error">${this.getProgressBar()}</span>`);
             this.printOutput(`\n<span class="bright-red">💀  PERDU ! Le mot était : ${secretWord}</span>`);
+
+            if (this.currentGame.infinite_mode) {
+                this.printOutput(`<span class="warning">🔄 MODE INFINI TERMINÉ !</span>`);
+                this.printOutput(`<span class="info">📊 Performance finale :</span>`);
+                this.printOutput(`<span class="info">   • Mots trouvés : ${this.currentGame.words_found}</span>`);
+                this.printOutput(`<span class="info">   • Vies gagnées : ${this.currentGame.total_lives_gained}</span>`);
+            }
         }
 
         this.printOutput(`⏱️  Temps de jeu: ${gameTime.toFixed(1)} secondes`);
@@ -700,9 +741,272 @@ class TerminalPendu {
             // Ignore stats errors
         }
 
-        await this.waitForInput('\nAppuie sur Entrée pour continuer...');
-        this.currentGame = null;
-        this.showMenu();
+        // Mode infini : continuer automatiquement si victoire
+        if (this.currentGame.infinite_mode && won) {
+            await this.waitForInput('\nAppuie sur Entrée pour le mot suivant...');
+
+            // Démarrer un nouveau mot
+            await this.startNewWordInfinite();
+        } else if (!won) {
+            // Menu après défaite
+            await this.showDefeatMenu();
+        } else {
+            await this.waitForInput('\nAppuie sur Entrée pour continuer...');
+            this.currentGame = null;
+            this.showMenu();
+        }
+    }
+
+    async showDefeatMenu() {
+        this.printOutput('\n');
+        this.printOutput(`<span class="warning">═══════════════════════════════════════</span>`);
+        this.printOutput(`<span class="warning">          QUE VEUX-TU FAIRE ?           </span>`);
+        this.printOutput(`<span class="warning">═══════════════════════════════════════</span>\n`);
+
+        const defeatMenuItems = [
+            { text: '🔄  Rejouer (même difficulté)', command: 'replay', class: 'success' },
+            { text: '⚙️   Changer de mode', command: 'change', class: 'info' },
+            { text: '🏠  Retour à l\'accueil', command: 'home', class: 'warning' }
+        ];
+
+        const choice = await this.showSelectionMenu(defeatMenuItems, 'Choisis ton action :');
+
+        switch(choice) {
+            case 'replay':
+                await this.replayGame();
+                break;
+            case 'change':
+                this.currentGame = null;
+                await this.startGame(); // Retour au choix de difficulté
+                break;
+            case 'home':
+            default:
+                this.currentGame = null;
+                this.showMenu();
+                break;
+        }
+    }
+
+    async replayGame() {
+        try {
+            // Relancer avec les mêmes paramètres
+            const savedDifficultyLevel = this.currentGame.difficulty_level;
+            const savedMaxErrors = this.currentGame.max_errors;
+            const savedTimerDelay = this.currentGame.timer_delay;
+            const savedInfiniteMode = this.currentGame.infinite_mode;
+
+            const response = await fetch('/api/game/start', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    player_name: this.playerName,
+                    password: this.playerPassword,
+                    difficulty: ['easy', 'middle', 'hard'][savedDifficultyLevel]
+                })
+            });
+
+            if (!response.ok) {
+                throw new Error('Erreur lors de la création du nouveau jeu');
+            }
+
+            const gameData = await response.json();
+            this.currentGame = gameData;
+
+            // Restaurer les paramètres
+            this.currentGame.max_errors = savedMaxErrors;
+            this.currentGame.difficulty_level = savedDifficultyLevel;
+            this.currentGame.timer_delay = savedTimerDelay;
+            this.currentGame.errors = 0;
+            this.currentGame.hints_used = 0;
+            this.currentGame.found_letters = [];
+            this.currentGame.wrong_letters = [];
+
+            // Réinitialiser le mode infini si c'était actif
+            if (savedInfiniteMode) {
+                this.currentGame.infinite_mode = true;
+                this.currentGame.words_found = 0;
+                this.currentGame.total_lives_gained = 0;
+            }
+
+            this.gameStartTime = Date.now();
+            this.clearTerminal();
+
+            if (savedInfiniteMode) {
+                this.printOutput(`<span class="cyan">🔄 NOUVEAU JEU - MODE INFINI</span>`);
+                this.printOutput(`<span class="info">Vies de départ : ${this.currentGame.lives}</span>\n`);
+            } else {
+                this.printOutput(`<span class="success">🎮 NOUVEAU JEU</span>\n`);
+            }
+
+            this.printOutput(`Mot à deviner : ${gameData.word_display.replace(/_/g, '').length} lettres`);
+
+            if (this.currentGame.timer_delay) {
+                this.printOutput('<span class="cyan">💡 Attention : Timer activé !</span>');
+            }
+            this.printOutput('<span class="cyan">💡 Tapez \'indice\' pour révéler une lettre (coûte 1 vie)</span>');
+
+            this.cleanupMenuNavigation();
+            this.gameState = 'playing';
+            await this.playGame();
+
+        } catch (error) {
+            this.printOutput(`<span class="error">Erreur: ${error.message}</span>`);
+            await this.waitForInput('\nAppuie sur Entrée pour retourner au menu...');
+            this.currentGame = null;
+            this.showMenu();
+        }
+    }
+
+    async startNewWordInfinite() {
+        try {
+            // Conserver les paramètres actuels
+            const savedLives = this.currentGame.lives;
+            const savedWordsFound = this.currentGame.words_found;
+            const savedTotalLivesGained = this.currentGame.total_lives_gained;
+            const savedMaxErrors = this.currentGame.max_errors;
+            const savedDifficultyLevel = this.currentGame.difficulty_level;
+            const savedTimerDelay = this.currentGame.timer_delay;
+
+            // Demander un nouveau mot
+            const response = await fetch('/api/game/start', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    player_name: this.playerName,
+                    password: this.playerPassword,
+                    difficulty: ['easy', 'middle', 'hard'][savedDifficultyLevel]
+                })
+            });
+
+            if (!response.ok) {
+                throw new Error('Erreur lors de la création du nouveau mot');
+            }
+
+            const gameData = await response.json();
+            this.currentGame = gameData;
+
+            // Restaurer les paramètres sauvés
+            this.currentGame.lives = savedLives;
+            this.currentGame.words_found = savedWordsFound;
+            this.currentGame.total_lives_gained = savedTotalLivesGained;
+            this.currentGame.max_errors = savedMaxErrors;
+            this.currentGame.difficulty_level = savedDifficultyLevel;
+            this.currentGame.timer_delay = savedTimerDelay;
+            this.currentGame.errors = 0;
+            this.currentGame.hints_used = 0;
+            this.currentGame.found_letters = [];
+            this.currentGame.infinite_mode = true;
+            this.currentGame.wrong_letters = [];
+
+            // Redémarrer le chrono pour ce nouveau mot
+            this.gameStartTime = Date.now();
+
+            this.clearTerminal();
+            this.printOutput(`<span class="cyan">🔄 NOUVEAU MOT - MODE INFINI</span>`);
+            this.printOutput(`<span class="info">📊 Mots trouvés : ${this.currentGame.words_found} | Vies restantes : ${this.currentGame.lives}</span>\n`);
+
+            this.printOutput(`Mot à deviner : ${gameData.word_display.replace(/_/g, '').length} lettres`);
+
+            if (this.currentGame.timer_delay) {
+                this.printOutput('<span class="cyan">💡 Attention : Timer activé !</span>');
+            }
+            this.printOutput('<span class="cyan">💡 Tapez \'indice\' pour révéler une lettre (coûte 1 vie)</span>');
+
+            this.cleanupMenuNavigation();
+            this.gameState = 'playing';
+            await this.playGame();
+
+        } catch (error) {
+            this.printOutput(`<span class="error">Erreur: ${error.message}</span>`);
+            await this.waitForInput('\nAppuie sur Entrée pour retourner au menu...');
+            this.currentGame = null;
+            this.showMenu();
+        }
+    }
+
+    async showSelectionMenu(menuItems, prompt) {
+        return new Promise((resolve) => {
+            let selectedIndex = 0;
+
+            const renderSelectionMenu = () => {
+                // Clear previous menu items only
+                const lines = this.output.innerHTML.split('\n');
+                const menuStartIndex = lines.findIndex(line => line.includes(prompt));
+                if (menuStartIndex !== -1) {
+                    // Keep everything before the prompt
+                    this.output.innerHTML = lines.slice(0, menuStartIndex).join('\n') + '\n';
+                }
+
+                this.printOutput(`<span class="cyan">${prompt}</span>\n`);
+
+                menuItems.forEach((item, index) => {
+                    const isSelected = index === selectedIndex;
+                    const prefix = isSelected ? '> ' : '  ';
+                    const highlightClass = isSelected ? 'bright-white' : item.class;
+                    const menuHtml = `<span class="${highlightClass}" data-selection-index="${index}" style="cursor: pointer; display: block; padding: 2px 0;">${prefix}${item.text}</span>`;
+                    this.output.innerHTML += menuHtml + '\n';
+                });
+
+                this.printOutput('\n<span class="muted">Utilisez ↑↓ et Entrée ou cliquez sur une option</span>');
+
+                // Add click event listeners
+                setTimeout(() => {
+                    this.output.querySelectorAll('[data-selection-index]').forEach(element => {
+                        element.addEventListener('click', (e) => {
+                            e.preventDefault();
+                            selectedIndex = parseInt(e.target.dataset.selectionIndex);
+                            cleanup();
+                            resolve(menuItems[selectedIndex].command);
+                        });
+                    });
+                }, 100);
+            };
+
+            const keyHandler = (e) => {
+                switch(e.key) {
+                    case 'ArrowUp':
+                        e.preventDefault();
+                        selectedIndex = (selectedIndex - 1 + menuItems.length) % menuItems.length;
+                        renderSelectionMenu();
+                        break;
+                    case 'ArrowDown':
+                        e.preventDefault();
+                        selectedIndex = (selectedIndex + 1) % menuItems.length;
+                        renderSelectionMenu();
+                        break;
+                    case 'Enter':
+                        e.preventDefault();
+                        cleanup();
+                        resolve(menuItems[selectedIndex].command);
+                        break;
+                    case 'Escape':
+                        e.preventDefault();
+                        cleanup();
+                        resolve(null);
+                        break;
+                }
+            };
+
+            const cleanup = () => {
+                document.removeEventListener('keydown', keyHandler);
+                // Remove click listeners
+                this.output.querySelectorAll('[data-selection-index]').forEach(element => {
+                    element.replaceWith(element.cloneNode(true));
+                });
+            };
+
+            // Initial render
+            renderSelectionMenu();
+
+            // Setup keyboard navigation with delay
+            setTimeout(() => {
+                document.addEventListener('keydown', keyHandler);
+            }, 200);
+        });
     }
 
     async showLoadingAnimation(message, duration) {
@@ -721,13 +1025,30 @@ class TerminalPendu {
     async showStats() {
         this.clearTerminal();
 
-        let playerName = this.playerName;
-        if (!playerName) {
-            playerName = await this.waitForInput('Quel est ton nom pour voir tes stats ? : ');
+        // Menu de sélection pour les stats
+        this.printOutput(`<span class="warning">═══════════════════════════════════════</span>`);
+        this.printOutput(`<span class="warning">         STATISTIQUES - SÉLECTION        </span>`);
+        this.printOutput(`<span class="warning">═══════════════════════════════════════</span>\n`);
+
+        const statsMenuItems = [
+            { text: '👤  Mes statistiques', command: 'me', class: 'success' },
+            { text: '🔍  Statistiques d\'un autre joueur', command: 'other', class: 'info' }
+        ];
+
+        const choice = await this.showSelectionMenu(statsMenuItems, 'Que veux-tu voir ?');
+
+        let playerName;
+        if (choice === 'me') {
+            playerName = this.playerName;
+        } else if (choice === 'other') {
+            playerName = await this.waitForInput('Nom du joueur à consulter : ');
             if (!playerName.trim()) {
                 this.showMenu();
                 return;
             }
+        } else {
+            this.showMenu();
+            return;
         }
 
         try {

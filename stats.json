@@ -180,21 +180,21 @@
     "last_game_perfect": false
   },
   "gaetan": {
-    "games_played": 9,
-    "games_won": 1,
-    "total_words_found": 1,
-    "total_wrong_letters": 53,
-    "total_time": 144.997132062912,
-    "best_time": 12.042562007904053,
-    "longest_word": 6,
+    "games_played": 18,
+    "games_won": 6,
+    "total_words_found": 6,
+    "total_wrong_letters": 81,
+    "total_time": 347.73823976516724,
+    "best_time": 8.764311075210571,
+    "longest_word": 11,
     "difficulty_stats": {
       "easy": 3,
-      "middle": 5,
-      "hard": 1
+      "middle": 9,
+      "hard": 6
     },
-    "last_played": "2025-09-16T15:47:58.967815",
+    "last_played": "2025-09-16T16:12:10.730407",
     "current_streak": 0,
-    "best_streak": 1,
+    "best_streak": 2,
     "difficulty_streaks": {
       "easy": 0,
       "middle": 0,
@@ -215,6 +215,41 @@
           "difficulty": "middle",
           "time": 12.042562007904053,
           "hints_used": 3
+        },
+        {
+          "word": "NOMBRE",
+          "date": "2025-09-16T15:59:54.984548",
+          "difficulty": "middle",
+          "time": 34.249634981155396,
+          "hints_used": 0
+        },
+        {
+          "word": "CONSENTIR",
+          "date": "2025-09-16T16:00:39.564290",
+          "difficulty": "middle",
+          "time": 36.753320932388306,
+          "hints_used": 0
+        },
+        {
+          "word": "TECHNOLOGIE",
+          "date": "2025-09-16T16:09:14.827767",
+          "difficulty": "hard",
+          "time": 8.764311075210571,
+          "hints_used": 0
+        },
+        {
+          "word": "DESCRIPTION",
+          "date": "2025-09-16T16:10:21.683644",
+          "difficulty": "hard",
+          "time": 28.216907024383545,
+          "hints_used": 0
+        },
+        {
+          "word": "EXPLORATION",
+          "date": "2025-09-16T16:10:57.029491",
+          "difficulty": "hard",
+          "time": 31.9266037940979,
+          "hints_used": 0
         }
       ],
       "lost": [
@@ -272,6 +307,34 @@
           "date": "2025-09-16T15:47:58.967843",
           "difficulty": "hard",
           "time": 5.0053019523620605,
+          "hints_used": 0
+        },
+        {
+          "word": "VITESSE",
+          "date": "2025-09-16T16:00:56.394463",
+          "difficulty": "middle",
+          "time": 9.739000082015991,
+          "hints_used": 0
+        },
+        {
+          "word": "DEBARRASSER",
+          "date": "2025-09-16T16:09:50.064283",
+          "difficulty": "hard",
+          "time": 12.520279884338379,
+          "hints_used": 0
+        },
+        {
+          "word": "COMPORTEMENT",
+          "date": "2025-09-16T16:11:12.579659",
+          "difficulty": "hard",
+          "time": 12.753242015838623,
+          "hints_used": 0
+        },
+        {
+          "word": "LABORATOIRE",
+          "date": "2025-09-16T16:12:10.730436",
+          "difficulty": "middle",
+          "time": 27.817807912826538,
           "hints_used": 0
         }
       ]
@@ -586,6 +649,184 @@
         }
       ],
       "lost": []
+    },
+    "total_hints": 0,
+    "last_game_perfect": false
+  },
+  "eldiablo": {
+    "games_played": 7,
+    "games_won": 0,
+    "total_words_found": 0,
+    "total_wrong_letters": 24,
+    "total_time": 87.91815829277039,
+    "best_time": null,
+    "longest_word": 0,
+    "difficulty_stats": {
+      "easy": 1,
+      "middle": 3,
+      "hard": 3
+    },
+    "last_played": "2025-09-16T16:03:19.176006",
+    "current_streak": 0,
+    "best_streak": 0,
+    "difficulty_streaks": {
+      "easy": 0,
+      "middle": 0,
+      "hard": 0
+    },
+    "best_difficulty_streaks": {
+      "easy": 0,
+      "middle": 0,
+      "hard": 0
+    },
+    "achievements": [],
+    "hints_used": 0,
+    "words_history": {
+      "won": [],
+      "lost": [
+        {
+          "word": "DIRECTEUR",
+          "date": "2025-09-16T16:00:48.913966",
+          "difficulty": "middle",
+          "time": 31.0230610370636,
+          "hints_used": 0
+        },
+        {
+          "word": "SOIREE",
+          "date": "2025-09-16T16:01:16.457586",
+          "difficulty": "middle",
+          "time": 12.896399021148682,
+          "hints_used": 0
+        },
+        {
+          "word": "INDEPENDENCE",
+          "date": "2025-09-16T16:01:42.774784",
+          "difficulty": "hard",
+          "time": 5.0015411376953125,
+          "hints_used": 0
+        },
+        {
+          "word": "CONTRAINDRE",
+          "date": "2025-09-16T16:01:59.160185",
+          "difficulty": "hard",
+          "time": 5.626269102096558,
+          "hints_used": 0
+        },
+        {
+          "word": "ENSEIGNEMENT",
+          "date": "2025-09-16T16:02:25.374149",
+          "difficulty": "hard",
+          "time": 11.519852876663208,
+          "hints_used": 0
+        },
+        {
+          "word": "ADAPTER",
+          "date": "2025-09-16T16:02:55.492285",
+          "difficulty": "easy",
+          "time": 15.879018068313599,
+          "hints_used": 0
+        },
+        {
+          "word": "ASSOMMER",
+          "date": "2025-09-16T16:03:19.176054",
+          "difficulty": "middle",
+          "time": 5.972017049789429,
+          "hints_used": 0
+        }
+      ]
+    },
+    "total_hints": 0,
+    "last_game_perfect": false
+  },
+  "pedro": {
+    "games_played": 8,
+    "games_won": 2,
+    "total_words_found": 2,
+    "total_wrong_letters": 39,
+    "total_time": 175.9919285774231,
+    "best_time": 18.01956009864807,
+    "longest_word": 9,
+    "difficulty_stats": {
+      "easy": 0,
+      "middle": 8,
+      "hard": 0
+    },
+    "last_played": "2025-09-16T16:12:37.123380",
+    "current_streak": 0,
+    "best_streak": 1,
+    "difficulty_streaks": {
+      "easy": 0,
+      "middle": 0,
+      "hard": 0
+    },
+    "best_difficulty_streaks": {
+      "easy": 0,
+      "middle": 0,
+      "hard": 0
+    },
+    "achievements": [],
+    "hints_used": 0,
+    "words_history": {
+      "won": [
+        {
+          "word": "DETENTION",
+          "date": "2025-09-16T16:09:05.971635",
+          "difficulty": "middle",
+          "time": 20.063080072402954,
+          "hints_used": 0
+        },
+        {
+          "word": "MERITER",
+          "date": "2025-09-16T16:11:59.848069",
+          "difficulty": "middle",
+          "time": 18.01956009864807,
+          "hints_used": 0
+        }
+      ],
+      "lost": [
+        {
+          "word": "NECESSITE",
+          "date": "2025-09-16T16:09:55.020886",
+          "difficulty": "middle",
+          "time": 33.47895908355713,
+          "hints_used": 0
+        },
+        {
+          "word": "AFFAIBLIR",
+          "date": "2025-09-16T16:10:27.790670",
+          "difficulty": "middle",
+          "time": 21.091114044189453,
+          "hints_used": 0
+        },
+        {
+          "word": "HISTOIRE",
+          "date": "2025-09-16T16:10:57.511684",
+          "difficulty": "middle",
+          "time": 25.517357110977173,
+          "hints_used": 0
+        },
+        {
+          "word": "CROYANCE",
+          "date": "2025-09-16T16:11:36.559856",
+          "difficulty": "middle",
+          "time": 27.790218114852905,
+          "hints_used": 0
+        },
+        {
+          "word": "PHYSIQUE",
+          "date": "2025-09-16T16:12:19.511340",
+          "difficulty": "middle",
+          "time": 16.997437000274658,
+          "hints_used": 0
+        },
+        {
+          "word": "DESIRER",
+          "date": "2025-09-16T16:12:37.123404",
+          "difficulty": "middle",
+          "time": 13.034203052520752,
+          "hints_used": 0
+        }
+      ]
     },
     "total_hints": 0,
     "last_game_perfect": false
