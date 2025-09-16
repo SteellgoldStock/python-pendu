@@ -518,7 +518,11 @@ class TerminalPendu {
 
     displayGameState() {
         this.printOutput(' ');
-        this.printOutput(`Mot : ${this.currentGame.word_display}`);
+        if (this.currentGame.difficulty_level === 0) {
+            this.printOutput(`Mot : ${this.currentGame.word_display} (` + this.currentGame.word_display.length + ')');
+        } else {
+            this.printOutput(`Mot : ${this.currentGame.word_display}`);
+        }
 
         // Afficher lettres fausses seulement en mode easy
         if (this.currentGame.wrong_letters.length > 0 && this.currentGame.difficulty_level === 0) {
