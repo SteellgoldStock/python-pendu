@@ -7,15 +7,21 @@ import datetime
 import os
 import sys
 from list import choose_random_word
+from hangman_art import draw_hangman, draw_progress_bar
+import random
 
 RED = "\033[31m"
 GREEN = "\033[32m"
 BLUE = "\033[34m"
 YELLOW = "\033[33m"
 CYAN = "\033[36m"
+MAGENTA = "\033[35m"
+BRIGHT_GREEN = "\033[92m"
+BRIGHT_RED = "\033[91m"
+BRIGHT_YELLOW = "\033[93m"
 RESET = "\033[0m"
 
-STATS_FILE = "stats.txt"
+STATS_FILE = "stats.json"
 
 def clear_screen():
     print("\033[2J\033[H", end="")
@@ -38,7 +44,7 @@ def save_stats(stats):
     except Exception as e:
         print(f"Erreur lors de la sauvegarde des stats: {e}")
 
-def update_player_stats(player_name, won, word_length, wrong_letters_count, game_time, difficulty):
+def update_player_stats(player_name, won, word_length, wrong_letters_count, game_time, difficulty, hints_used=0, secret_word=""):
     """Update statistics for a player"""
     stats = load_stats()
 
@@ -52,14 +58,43 @@ def update_player_stats(player_name, won, word_length, wrong_letters_count, game
             "best_time": None,
             "longest_word": 0,
             "difficulty_stats": {"easy": 0, "middle": 0, "hard": 0},
-            "last_played": None
+            "last_played": None,
+            "current_streak": 0,
+            "best_streak": 0,
+            "difficulty_streaks": {"easy": 0, "middle": 0, "hard": 0},
+            "best_difficulty_streaks": {"easy": 0, "middle": 0, "hard": 0},
+            "achievements": [],
+            "hints_used": 0,
+            "words_history": {"won": [], "lost": []},
+            "total_hints": 0
         }
 
     player_stats = stats[player_name]
+
+    # Initialize new fields for existing players
+    if "current_streak" not in player_stats:
+        player_stats.update({
+            "current_streak": 0,
+            "best_streak": 0,
+            "difficulty_streaks": {"easy": 0, "middle": 0, "hard": 0},
+            "best_difficulty_streaks": {"easy": 0, "middle": 0, "hard": 0},
+            "achievements": [],
+            "hints_used": 0,
+            "words_history": {"won": [], "lost": []},
+            "total_hints": 0
+        })
+
+    # Ensure integer values for compatibility
+    for key in ["games_played", "games_won", "total_words_found", "total_wrong_letters", "longest_word"]:
+        if key in player_stats and isinstance(player_stats[key], float):
+            player_stats[key] = int(player_stats[key])
+
     player_stats["games_played"] += 1
     player_stats["total_wrong_letters"] += wrong_letters_count
     player_stats["total_time"] += game_time
+    player_stats["total_hints"] += hints_used
     player_stats["last_played"] = datetime.datetime.now().isoformat()
+    player_stats["last_game_perfect"] = (wrong_letters_count == 0 and won)
 
     difficulty_names = ["easy", "middle", "hard"]
     if 0 <= difficulty < len(difficulty_names):
@@ -70,8 +105,45 @@ def update_player_stats(player_name, won, word_length, wrong_letters_count, game
         player_stats["total_words_found"] += 1
         player_stats["longest_word"] = max(player_stats["longest_word"], word_length)
 
+        # Update streaks
+        player_stats["current_streak"] += 1
+        player_stats["best_streak"] = max(player_stats["best_streak"], player_stats["current_streak"])
+
+        # Update difficulty streaks
+        diff_name = difficulty_names[difficulty]
+        player_stats["difficulty_streaks"][diff_name] += 1
+        player_stats["best_difficulty_streaks"][diff_name] = max(
+            player_stats["best_difficulty_streaks"][diff_name],
+            player_stats["difficulty_streaks"][diff_name]
+        )
+
+        # Add word to history
+        if secret_word:
+            player_stats["words_history"]["won"].append({
+                "word": secret_word,
+                "date": datetime.datetime.now().isoformat(),
+                "difficulty": diff_name,
+                "time": game_time,
+                "hints_used": hints_used
+            })
+
         if player_stats["best_time"] is None or game_time < player_stats["best_time"]:
             player_stats["best_time"] = game_time
+    else:
+        # Reset streaks on loss
+        player_stats["current_streak"] = 0
+        for diff in difficulty_names:
+            player_stats["difficulty_streaks"][diff] = 0
+
+        # Add word to lost history
+        if secret_word:
+            player_stats["words_history"]["lost"].append({
+                "word": secret_word,
+                "date": datetime.datetime.now().isoformat(),
+                "difficulty": difficulty_names[difficulty],
+                "time": game_time,
+                "hints_used": hints_used
+            })
 
     save_stats(stats)
     return player_stats
@@ -164,36 +236,71 @@ def show_player_stats(player_name):
     print(f"{BLUE}       STATISTIQUES DE {player_name.upper()}       {RESET}")
     print(f"{BLUE}═══════════════════════════════════════{RESET}\n")
 
-    print(f"🎮  Parties jouées: {player_stats["games_played"]}")
-    print(f"🏆  Parties gagnées: {player_stats["games_won"]}")
+    print(f"🎮  Parties jouées: {player_stats['games_played']}")
+    print(f"🏆  Parties gagnées: {player_stats['games_won']}")
 
     if player_stats["games_played"] > 0:
         win_rate = (player_stats["games_won"] / player_stats["games_played"]) * 100
         print(f"📈  Taux de réussite: {win_rate:.1f}%")
 
-    print(f"📝  Mots trouvés: {player_stats["total_words_found"]}")
-    print(f"❌  Lettres fausses totales: {player_stats["total_wrong_letters"]}")
+    print(f"📝  Mots trouvés: {player_stats['total_words_found']}")
+    print(f"❌  Lettres fausses totales: {player_stats['total_wrong_letters']}")
 
     if player_stats["total_time"] > 0:
         avg_time = player_stats["total_time"] / player_stats["games_played"]
-        print(f"⏱️  Temps middle par partie: {avg_time:.1f}s")
+        print(f"⏱️  Temps moyen par partie: {avg_time:.1f}s")
 
         if player_stats["total_words_found"] > 0:
             words_per_minute = player_stats["total_words_found"] / (player_stats["total_time"] / 60)
             print(f"🚀  Mots par minute: {words_per_minute:.2f}")
 
     if player_stats["best_time"]:
-        print(f"⚡  Meilleur temps: {player_stats["best_time"]:.1f}s")
+        print(f"⚡  Meilleur temps: {player_stats['best_time']:.1f}s")
 
-    print(f"📏  Mot le plus long trouvé: {player_stats["longest_word"]} lettres")
+    print(f"📏  Mot le plus long trouvé: {player_stats['longest_word']} lettres")
+
+    # Streaks and achievements
+    if "current_streak" in player_stats:
+        print(f"🔥  Série actuelle: {player_stats['current_streak']}")
+        print(f"🏆  Meilleure série: {player_stats['best_streak']}")
+        print(f"💡  Indices utilisés: {player_stats.get('total_hints', 0)}")
 
     print(f"\n{YELLOW}Répartition par difficulté:{RESET}")
     for diff, count in player_stats["difficulty_stats"].items():
-        print(f"  {diff.capitalize()}: {count} parties")
+        streak_info = ""
+        if "difficulty_streaks" in player_stats:
+            current_streak = player_stats["difficulty_streaks"][diff]
+            best_streak = player_stats["best_difficulty_streaks"][diff]
+            if current_streak > 0:
+                streak_info = f" (série: {current_streak})"
+            elif best_streak > 0:
+                streak_info = f" (record: {best_streak})"
+        print(f"  {diff.capitalize()}: {count} parties{streak_info}")
+
+    # Achievements
+    if "achievements" in player_stats and player_stats["achievements"]:
+        print(f"\n{BRIGHT_YELLOW}🏆 Succès débloqués: {len(player_stats['achievements'])}{RESET}")
+        for achievement in player_stats["achievements"]:
+            print(f"  ✓ {achievement}")
+
+    # Recent words history
+    if "words_history" in player_stats:
+        recent_won = player_stats["words_history"]["won"][-5:]
+        recent_lost = player_stats["words_history"]["lost"][-5:]
+
+        if recent_won:
+            print(f"\n{GREEN}🎯 Derniers mots trouvés:{RESET}")
+            for word_info in reversed(recent_won):
+                print(f"  ✓ {word_info['word']} ({word_info['difficulty']}, {word_info['time']:.1f}s)")
+
+        if recent_lost:
+            print(f"\n{RED}❌ Derniers mots ratés:{RESET}")
+            for word_info in reversed(recent_lost):
+                print(f"  ✗ {word_info['word']} ({word_info['difficulty']}, {word_info['time']:.1f}s)")
 
     if player_stats["last_played"]:
         last_played = datetime.datetime.fromisoformat(player_stats["last_played"])
-        print(f"\n🕒  Dernière partie: {last_played.strftime("%d/%m/%Y à %H:%M")}")
+        print(f"\n🕒  Dernière partie: {last_played.strftime('%d/%m/%Y à %H:%M')}")
 
     input(f"\n{GREEN}Appuyez sur Entrée pour retourner au menu...{RESET}")
 
@@ -227,20 +334,20 @@ def show_leaderboard():
     # Top wins
     print(f"{GREEN}🏆  Top Victoires:{RESET}")
     for i, (name, data) in enumerate(players_by_wins[:5], 1):
-        print(f"{i}. {name}: {data["games_won"]} victoires")
+        print(f"{i}. {name}: {data['games_won']} victoires")
 
     # Top win rate (min 3 games)
     if players_by_winrate:
         print(f"\n{BLUE}📈  Meilleur taux de réussite (min 3 parties):{RESET}")
         for i, (name, data) in enumerate(players_by_winrate[:5], 1):
             rate = (data["games_won"] / data["games_played"]) * 100
-            print(f"{i}. {name}: {rate:.1f}% ({data["games_won"]}/{data["games_played"]})")
+            print(f"{i}. {name}: {rate:.1f}% ({data['games_won']}/{data['games_played']})")
 
     # Fastest players
     if players_by_speed:
         print(f"\n{CYAN}⚡  Plus rapides:{RESET}")
         for i, (name, data) in enumerate(players_by_speed[:5], 1):
-            print(f"{i}. {name}: {data["best_time"]:.1f}s")
+            print(f"{i}. {name}: {data['best_time']:.1f}s")
 
     input(f"\n{GREEN}Appuyez sur Entrée pour retourner au menu...{RESET}")
 
@@ -262,12 +369,12 @@ def get_input_with_timer(prompt, timeout=10, game_state=None):
         if game_state:
             clear_screen()
             print(" ")
-            print(f"Mot : {game_state["word_display"]}")
+            print(f"Mot : {game_state['word_display']}")
 
-            if game_state["wrong_letters"] and game_state["difficulty"] == 0:
-                print(f"Lettres fausses : {", ".join(sorted(game_state["wrong_letters"]))}")
+            if game_state['wrong_letters'] and game_state['difficulty'] == 0:
+                print("Lettres fausses : " + ", ".join(sorted(game_state['wrong_letters'])))
 
-            lives_display = f"Vies restantes : {(RED + "♥ " + RESET) * game_state["lives"]}"
+            lives_display = f"Vies restantes : {(RED + '♥ ' + RESET) * game_state['lives']}"
             if remaining <= 5:  # Red = <= 5 seconds
                 lives_display += f" ({RED}⏰ {remaining}s{RESET})"
             else:
@@ -285,10 +392,10 @@ def get_input_with_timer(prompt, timeout=10, game_state=None):
 
     if game_state:
         clear_screen()
-        print(f"Mot : {game_state["word_display"]}")
-        if game_state["wrong_letters"] and game_state["difficulty"] == 0:
-            print(f"Lettres fausses : {", ".join(sorted(game_state["wrong_letters"]))}")
-        print(f"Vies restantes : {(RED + "♥ " + RESET) * game_state["lives"]}")
+        print(f"Mot : {game_state['word_display']}")
+        if game_state['wrong_letters'] and game_state['difficulty'] == 0:
+            print("Lettres fausses : " + ", ".join(sorted(game_state['wrong_letters'])))
+        print(f"Vies restantes : {(RED + '♥ ' + RESET) * game_state['lives']}")
         print(f"\n⏰  Temps écoulé ! Tu perds une vie.")
 
     return None
@@ -325,6 +432,76 @@ def word_is_complete(word, found_letters):
             return False
     return True
 
+def show_loading_animation(message, duration=1):
+    """Show a loading animation"""
+    chars = "⠋⠙⠹⠸⠼⠴⠦⠧⠇⠏"
+    for i in range(int(duration * 10)):
+        print(f"\r{YELLOW}{chars[i % len(chars)]} {message}...{RESET}", end="", flush=True)
+        time.sleep(0.1)
+    print(f"\r{' ' * (len(message) + 10)}\r", end="", flush=True)
+
+def get_hint(secret_word, found_letters):
+    """Get a random unfound letter as hint"""
+    normalized_word = normalize_word(secret_word.lower())
+    unfound_letters = []
+
+    for i, char in enumerate(normalized_word):
+        if char in string.ascii_lowercase and char not in found_letters:
+            unfound_letters.append((char, secret_word[i]))
+
+    if unfound_letters:
+        normalized_hint, original_hint = random.choice(unfound_letters)
+        return normalized_hint, original_hint
+    return None, None
+
+def check_achievements(player_stats, difficulty_names):
+    """Check and award new achievements"""
+    new_achievements = []
+
+    # Streak achievements
+    if player_stats['current_streak'] == 5 and 'streak_5' not in player_stats['achievements']:
+        new_achievements.append('streak_5')
+        player_stats['achievements'].append('streak_5')
+
+    if player_stats['current_streak'] == 10 and 'streak_10' not in player_stats['achievements']:
+        new_achievements.append('streak_10')
+        player_stats['achievements'].append('streak_10')
+
+    # Difficulty streak achievements
+    for i, diff in enumerate(difficulty_names):
+        if player_stats['difficulty_streaks'][diff] == 3 and f'{diff}_streak_3' not in player_stats['achievements']:
+            new_achievements.append(f'{diff}_streak_3')
+            player_stats['achievements'].append(f'{diff}_streak_3')
+
+    # Games played achievements
+    if player_stats['games_played'] == 50 and 'games_50' not in player_stats['achievements']:
+        new_achievements.append('games_50')
+        player_stats['achievements'].append('games_50')
+
+    # Perfect game (no wrong letters)
+    if player_stats.get('last_game_perfect', False) and 'perfect_game' not in player_stats['achievements']:
+        new_achievements.append('perfect_game')
+        player_stats['achievements'].append('perfect_game')
+
+    return new_achievements
+
+def display_achievements(achievements):
+    """Display achievement notifications"""
+    achievement_messages = {
+        'streak_5': '🔥 Série de 5 victoires !',
+        'streak_10': '🔥🔥 Série de 10 victoires !',
+        'easy_streak_3': '🟢 3 victoires d\'affilée en Facile !',
+        'middle_streak_3': '🟡 3 victoires d\'affilée en Moyen !',
+        'hard_streak_3': '🔴 3 victoires d\'affilée en Difficile !',
+        'games_50': '🎮 50 parties jouées !',
+        'perfect_game': '✨ Partie parfaite (aucune erreur) !'
+    }
+
+    for achievement in achievements:
+        if achievement in achievement_messages:
+            print(f"\n{BRIGHT_YELLOW}🏆 SUCCÈS DÉBLOQUÉ: {achievement_messages[achievement]}{RESET}")
+            time.sleep(1)
+
 
 def play_hangman(player_name):
     """Main function of the game"""
@@ -352,32 +529,57 @@ def play_hangman(player_name):
     found_letters = set()
     wrong_letters = set()
     errors = 0
+    hints_used = 0
 
     print(f"Mot à deviner : {len(secret_word)} lettres")
+    print(f"{CYAN}💡 Tapez 'indice' pour révéler une lettre (coûte 1 vie){RESET}")
 
     while errors < max_errors:
         clear_screen()
         print(" ")
-        # print(draw_hangman(errors))
+        # Visual progress indicator
+        if errors > 0:
+            print(f"{RED}{draw_progress_bar(errors, max_errors, difficulty)}{RESET}")
+
         print(f"Mot : {display_masked_word(secret_word, found_letters)}")
 
         if wrong_letters and difficulty == 0:
-            print(f"Lettres fausses : {", ".join(sorted(wrong_letters))}")
+            wrong_letters_display = []
+            for letter in sorted(wrong_letters):
+                wrong_letters_display.append(f"{BRIGHT_RED}{letter}{RESET}")
+            print(f"Lettres fausses : {', '.join(wrong_letters_display)}")
 
-        print(f"Vies restantes : {(RED + "♥ " + RESET) * (max_errors - errors)}")
+        if hints_used > 0:
+            print(f"{CYAN}💡  Indices utilisés : {hints_used}{RESET}")
 
         if word_is_complete(secret_word, found_letters):
             end_time = time.time()
             game_time = end_time - start_time
 
-            print(f"\n🎉  BRAVO ! Tu as trouvé le mot : {secret_word}")
+            # Victory animation
+            show_loading_animation("Victoire", 1)
+            clear_screen()
+
+            print(f"\n{BRIGHT_GREEN}🎉  BRAVO ! Tu as trouvé le mot : {secret_word}{RESET}")
             print(f"⏱️  Temps de jeu: {game_time:.1f} secondes")
             print(f"❌  Lettres fausses: {len(wrong_letters)}")
 
-            # Update stats
-            player_stats = update_player_stats(player_name, True, len(secret_word), len(wrong_letters), game_time, difficulty)
+            if hints_used > 0:
+                print(f"💡  Indices utilisés: {hints_used}")
 
-            print(f"\n📊  Tes stats: {player_stats["games_won"]} victoires sur {player_stats["games_played"]} parties")
+            # Update stats
+            player_stats = update_player_stats(player_name, True, len(secret_word), len(wrong_letters), game_time, difficulty, hints_used, secret_word)
+
+            # Check for achievements
+            difficulty_names = ["easy", "middle", "hard"]
+            new_achievements = check_achievements(player_stats, difficulty_names)
+            if new_achievements:
+                display_achievements(new_achievements)
+
+            print(f"\n📊  Tes stats: {player_stats['games_won']} victoires sur {player_stats['games_played']} parties")
+            if "current_streak" in player_stats and player_stats['current_streak'] > 1:
+                print(f"🔥  Série actuelle: {player_stats['current_streak']}")
+
             input("\nAppuie sur Entrée pour continuer...")
             return True
 
@@ -406,6 +608,27 @@ def play_hangman(player_name):
             input("Appuie sur Entrée pour continuer...")
             continue
 
+        # Handle hint request
+        if entry == "indice":
+            if errors >= max_errors - 1:
+                print(f"{RED}❌ Tu n'as pas assez de vies pour un indice !{RESET}")
+                input("Appuie sur Entrée pour continuer...")
+                continue
+
+            hint_letter, original_letter = get_hint(secret_word, found_letters)
+            if hint_letter:
+                found_letters.add(hint_letter)
+                errors += 1
+                hints_used += 1
+                show_loading_animation("Recherche d'indice", 1)
+                print(f"\n{BRIGHT_YELLOW}💡 INDICE: La lettre '{original_letter}' est dans le mot !{RESET}")
+                input("Appuie sur Entrée pour continuer...")
+                continue
+            else:
+                print(f"{YELLOW}💡 Aucune lettre cachée disponible pour l'indice !{RESET}")
+                input("Appuie sur Entrée pour continuer...")
+                continue
+
         if len(entry) == 1:
             if not is_valid_letter(entry):
                 print("Merci d\'entrer une lettre valide !")
@@ -419,45 +642,72 @@ def play_hangman(player_name):
 
             if normalized_letter in secret_word_normalized:
                 found_letters.add(normalized_letter)
-                print(f"✓ Bonne lettre : {entry}")
+                print(f"{BRIGHT_GREEN}✓ Bonne lettre : {entry}{RESET}")
             else:
                 wrong_letters.add(normalized_letter)
                 errors += 1
-                print(f"✗ Mauvaise lettre : {entry}")
+                show_loading_animation("Ajout d'une partie du pendu", 0.5)
+                print(f"{BRIGHT_RED}✗ Mauvaise lettre : {entry}{RESET}")
 
         else:
-            entry = entry[0]
+            # Tentative de mot entier
+            guess_normalized = normalize_word(entry)
+            if guess_normalized == secret_word_normalized:
+                # Victoire immédiate
+                end_time = time.time()
+                game_time = end_time - start_time
 
-            if not is_valid_letter(entry):
-                print("Merci d\'entrer une lettre valide !")
-                continue
+                show_loading_animation("Victoire parfaite", 1)
+                clear_screen()
 
-            normalized_letter = normalize_character(entry)
+                print(f"\n{BRIGHT_GREEN}🎉  BRAVO ! Tu as trouvé le mot entier : {secret_word}{RESET}")
+                print(f"⏱️  Temps de jeu: {game_time:.1f} secondes")
+                print(f"❌  Lettres fausses: {len(wrong_letters)}")
 
-            if normalized_letter in found_letters or normalized_letter in wrong_letters:
-                print("Tu as déjà essayé cette lettre !")
-                continue
+                if hints_used > 0:
+                    print(f"💡  Indices utilisés: {hints_used}")
 
-            if normalized_letter in secret_word_normalized:
-                found_letters.add(normalized_letter)
-                print(f"✓ Bonne lettre : \"{entry}\"")
+                # Update stats
+                player_stats = update_player_stats(player_name, True, len(secret_word), len(wrong_letters), game_time, difficulty, hints_used, secret_word)
+
+                # Check for achievements
+                difficulty_names = ["easy", "middle", "hard"]
+                new_achievements = check_achievements(player_stats, difficulty_names)
+                if new_achievements:
+                    display_achievements(new_achievements)
+
+                print(f"\n📊  Tes stats: {player_stats['games_won']} victoires sur {player_stats['games_played']} parties")
+                if "current_streak" in player_stats and player_stats['current_streak'] > 1:
+                    print(f"🔥  Série actuelle: {player_stats['current_streak']}")
+
+                input("\nAppuie sur Entrée pour continuer...")
+                return True
             else:
-                wrong_letters.add(normalized_letter)
+                show_loading_animation("Vérification du mot", 0.5)
+                print(f"{BRIGHT_RED}✗ Mauvaise proposition de mot : \"{entry}\"{RESET}")
                 errors += 1
-                print(f"✗ Mauvaise lettre : \"{entry}\"")
 
-    # print(draw_hangman(errors))
+    # Game over
+    show_loading_animation("Défaite", 1)
+    clear_screen()
+
+    print(f"{RED}{draw_progress_bar(errors, max_errors, difficulty)}{RESET}")
     end_time = time.time()
     game_time = end_time - start_time
 
-    print(f"\n💀  PERDU ! Le mot était : {secret_word}")
+    print(f"\n{BRIGHT_RED}💀  PERDU ! Le mot était : {secret_word}{RESET}")
     print(f"⏱️  Temps de jeu: {game_time:.1f} secondes")
     print(f"❌  Lettres fausses: {len(wrong_letters)}")
 
-    # Update stats
-    player_stats = update_player_stats(player_name, False, len(secret_word), len(wrong_letters), game_time, difficulty)
+    if hints_used > 0:
+        print(f"💡  Indices utilisés: {hints_used}")
 
-    print(f"\n📊  Tes stats: {player_stats["games_won"]} victoires sur {player_stats["games_played"]} parties")
+    # Update stats
+    player_stats = update_player_stats(player_name, False, len(secret_word), len(wrong_letters), game_time, difficulty, hints_used, secret_word)
+
+    print(f"\n📊  Tes stats: {player_stats['games_won']} victoires sur {player_stats['games_played']} parties")
+    print(f"{RED}💔  Série interrompue{RESET}")
+
     input("\nAppuie sur Entrée pour continuer...")
     return False
 

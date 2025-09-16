@@ -1,0 +1,110 @@
+{
+  "Gaetan": {
+    "games_played": 4,
+    "games_won": 2,
+    "total_words_found": 2,
+    "total_wrong_letters": 20,
+    "total_time": 228.41447043418884,
+    "best_time": 42.95995616912842,
+    "longest_word": 9,
+    "difficulty_stats": {
+      "easy": 4,
+      "middle": 0,
+      "hard": 0
+    },
+    "last_played": "2025-09-16T13:35:09.474565",
+    "current_streak": 1,
+    "best_streak": 1,
+    "difficulty_streaks": {
+      "easy": 1,
+      "middle": 0,
+      "hard": 0
+    },
+    "best_difficulty_streaks": {
+      "easy": 1,
+      "middle": 0,
+      "hard": 0
+    },
+    "achievements": [],
+    "hints_used": 0,
+    "words_history": {
+      "won": [
+        {
+          "word": "DEGONFLER",
+          "date": "2025-09-16T13:23:54.796768",
+          "difficulty": "easy",
+          "time": 52.176756858825684,
+          "hints_used": 6
+        },
+        {
+          "word": "SUPPORTER",
+          "date": "2025-09-16T13:35:09.474626",
+          "difficulty": "easy",
+          "time": 42.95995616912842,
+          "hints_used": 6
+        }
+      ],
+      "lost": [
+        {
+          "word": "REGLER",
+          "date": "2025-09-16T13:27:53.929277",
+          "difficulty": "easy",
+          "time": 100.49386429786682,
+          "hints_used": 1
+        },
+        {
+          "word": "COUTUME",
+          "date": "2025-09-16T13:32:42.152876",
+          "difficulty": "easy",
+          "time": 32.78389310836792,
+          "hints_used": 0
+        }
+      ]
+    },
+    "total_hints": 13,
+    "last_game_perfect": false
+  },
+  "kml": {
+    "games_played": 1,
+    "games_won": 0,
+    "total_words_found": 0,
+    "total_wrong_letters": 4,
+    "total_time": 57.25548005104065,
+    "best_time": null,
+    "longest_word": 0,
+    "difficulty_stats": {
+      "easy": 0,
+      "middle": 1,
+      "hard": 0
+    },
+    "last_played": "2025-09-16T13:25:34.799219",
+    "current_streak": 0,
+    "best_streak": 0,
+    "difficulty_streaks": {
+      "easy": 0,
+      "middle": 0,
+      "hard": 0
+    },
+    "best_difficulty_streaks": {
+      "easy": 0,
+      "middle": 0,
+      "hard": 0
+    },
+    "achievements": [],
+    "hints_used": 0,
+    "words_history": {
+      "won": [],
+      "lost": [
+        {
+          "word": "ISOLER",
+          "date": "2025-09-16T13:25:34.799267",
+          "difficulty": "middle",
+          "time": 57.25548005104065,
+          "hints_used": 1
+        }
+      ]
+    },
+    "total_hints": 1,
+    "last_game_perfect": false
+  }
+}
