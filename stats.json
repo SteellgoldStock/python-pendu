@@ -1,20 +1,20 @@
 {
   "Gaetan": {
-    "games_played": 4,
-    "games_won": 2,
-    "total_words_found": 2,
-    "total_wrong_letters": 20,
-    "total_time": 228.41447043418884,
-    "best_time": 42.95995616912842,
+    "games_played": 6,
+    "games_won": 4,
+    "total_words_found": 4,
+    "total_wrong_letters": 31,
+    "total_time": 270.16042852401733,
+    "best_time": 16.77524995803833,
     "longest_word": 9,
     "difficulty_stats": {
-      "easy": 4,
-      "middle": 0,
+      "easy": 5,
+      "middle": 1,
       "hard": 0
     },
-    "last_played": "2025-09-16T13:35:09.474565",
-    "current_streak": 1,
-    "best_streak": 1,
+    "last_played": "2025-09-16T14:54:20.608845",
+    "current_streak": 3,
+    "best_streak": 3,
     "difficulty_streaks": {
       "easy": 1,
       "middle": 0,
@@ -42,6 +42,20 @@
           "difficulty": "easy",
           "time": 42.95995616912842,
           "hints_used": 6
+        },
+        {
+          "word": "CABLE",
+          "date": "2025-09-16T14:53:54.907318",
+          "difficulty": "easy",
+          "time": 24.97070813179016,
+          "hints_used": 0
+        },
+        {
+          "word": "BLAGUE",
+          "date": "2025-09-16T14:54:20.608867",
+          "difficulty": "middle",
+          "time": 16.77524995803833,
+          "hints_used": 0
         }
       ],
       "lost": [
@@ -65,21 +79,21 @@
     "last_game_perfect": false
   },
   "kml": {
-    "games_played": 1,
-    "games_won": 0,
-    "total_words_found": 0,
-    "total_wrong_letters": 4,
-    "total_time": 57.25548005104065,
-    "best_time": null,
-    "longest_word": 0,
+    "games_played": 3,
+    "games_won": 1,
+    "total_words_found": 1,
+    "total_wrong_letters": 14,
+    "total_time": 125.58219003677368,
+    "best_time": 43.912379026412964,
+    "longest_word": 9,
     "difficulty_stats": {
-      "easy": 0,
-      "middle": 1,
+      "easy": 1,
+      "middle": 2,
       "hard": 0
     },
-    "last_played": "2025-09-16T13:25:34.799219",
+    "last_played": "2025-09-16T15:42:29.988332",
     "current_streak": 0,
-    "best_streak": 0,
+    "best_streak": 1,
     "difficulty_streaks": {
       "easy": 0,
       "middle": 0,
@@ -93,7 +107,15 @@
     "achievements": [],
     "hints_used": 0,
     "words_history": {
-      "won": [],
+      "won": [
+        {
+          "word": "INTENTION",
+          "date": "2025-09-16T15:41:02.484893",
+          "difficulty": "easy",
+          "time": 43.912379026412964,
+          "hints_used": 0
+        }
+      ],
       "lost": [
         {
           "word": "ISOLER",
@@ -101,10 +123,471 @@
           "difficulty": "middle",
           "time": 57.25548005104065,
           "hints_used": 1
+        },
+        {
+          "word": "CHAPEAU",
+          "date": "2025-09-16T15:42:29.988360",
+          "difficulty": "middle",
+          "time": 24.41433095932007,
+          "hints_used": 0
         }
       ]
     },
     "total_hints": 1,
+    "last_game_perfect": false
+  },
+  "mabite": {
+    "games_played": 1,
+    "games_won": 1,
+    "total_words_found": 1,
+    "total_wrong_letters": 4,
+    "total_time": 68.26634860038757,
+    "best_time": 68.26634860038757,
+    "longest_word": 8,
+    "difficulty_stats": {
+      "easy": 1,
+      "middle": 0,
+      "hard": 0
+    },
+    "last_played": "2025-09-16T13:39:59.670156",
+    "current_streak": 1,
+    "best_streak": 1,
+    "difficulty_streaks": {
+      "easy": 1,
+      "middle": 0,
+      "hard": 0
+    },
+    "best_difficulty_streaks": {
+      "easy": 1,
+      "middle": 0,
+      "hard": 0
+    },
+    "achievements": [],
+    "hints_used": 0,
+    "words_history": {
+      "won": [
+        {
+          "word": "VIEILLIR",
+          "date": "2025-09-16T13:39:59.670212",
+          "difficulty": "easy",
+          "time": 68.26634860038757,
+          "hints_used": 2
+        }
+      ],
+      "lost": []
+    },
+    "total_hints": 2,
+    "last_game_perfect": false
+  },
+  "gaetan": {
+    "games_played": 9,
+    "games_won": 1,
+    "total_words_found": 1,
+    "total_wrong_letters": 53,
+    "total_time": 144.997132062912,
+    "best_time": 12.042562007904053,
+    "longest_word": 6,
+    "difficulty_stats": {
+      "easy": 3,
+      "middle": 5,
+      "hard": 1
+    },
+    "last_played": "2025-09-16T15:47:58.967815",
+    "current_streak": 0,
+    "best_streak": 1,
+    "difficulty_streaks": {
+      "easy": 0,
+      "middle": 0,
+      "hard": 0
+    },
+    "best_difficulty_streaks": {
+      "easy": 0,
+      "middle": 0,
+      "hard": 0
+    },
+    "achievements": [],
+    "hints_used": 0,
+    "words_history": {
+      "won": [
+        {
+          "word": "MANQUE",
+          "date": "2025-09-16T14:02:31.650171",
+          "difficulty": "middle",
+          "time": 12.042562007904053,
+          "hints_used": 3
+        }
+      ],
+      "lost": [
+        {
+          "word": "PEINER",
+          "date": "2025-09-16T13:59:40.235110",
+          "difficulty": "middle",
+          "time": 7.023200988769531,
+          "hints_used": 0
+        },
+        {
+          "word": "EVALUER",
+          "date": "2025-09-16T14:06:38.536642",
+          "difficulty": "middle",
+          "time": 16.69828987121582,
+          "hints_used": 0
+        },
+        {
+          "word": "VOIE",
+          "date": "2025-09-16T14:29:20.356617",
+          "difficulty": "easy",
+          "time": 55.412163972854614,
+          "hints_used": 0
+        },
+        {
+          "word": "VARIER",
+          "date": "2025-09-16T15:28:34.523427",
+          "difficulty": "middle",
+          "time": 11.749873161315918,
+          "hints_used": 0
+        },
+        {
+          "word": "VIANDE",
+          "date": "2025-09-16T15:34:33.417616",
+          "difficulty": "easy",
+          "time": 15.063488006591797,
+          "hints_used": 0
+        },
+        {
+          "word": "CONDUIRE",
+          "date": "2025-09-16T15:38:05.432321",
+          "difficulty": "easy",
+          "time": 15.563915967941284,
+          "hints_used": 0
+        },
+        {
+          "word": "INTEGRER",
+          "date": "2025-09-16T15:45:52.624899",
+          "difficulty": "middle",
+          "time": 6.438336133956909,
+          "hints_used": 0
+        },
+        {
+          "word": "NEUTRALISER",
+          "date": "2025-09-16T15:47:58.967843",
+          "difficulty": "hard",
+          "time": 5.0053019523620605,
+          "hints_used": 0
+        }
+      ]
+    },
+    "total_hints": 3,
+    "last_game_perfect": false
+  },
+  "slay": {
+    "games_played": 33,
+    "games_won": 14,
+    "total_words_found": 14,
+    "total_wrong_letters": 67,
+    "total_time": 549.6016747951508,
+    "best_time": 8.80178689956665,
+    "longest_word": 14,
+    "difficulty_stats": {
+      "easy": 0,
+      "middle": 0,
+      "hard": 33
+    },
+    "last_played": "2025-09-16T15:52:17.210312",
+    "current_streak": 0,
+    "best_streak": 8,
+    "difficulty_streaks": {
+      "easy": 0,
+      "middle": 0,
+      "hard": 0
+    },
+    "best_difficulty_streaks": {
+      "easy": 0,
+      "middle": 0,
+      "hard": 0
+    },
+    "achievements": [],
+    "hints_used": 0,
+    "words_history": {
+      "won": [
+        {
+          "word": "INSTALLATION",
+          "date": "2025-09-16T14:35:40.210432",
+          "difficulty": "hard",
+          "time": 46.641632080078125,
+          "hints_used": 0
+        },
+        {
+          "word": "PRESENTATION",
+          "date": "2025-09-16T14:37:03.716946",
+          "difficulty": "hard",
+          "time": 15.631306171417236,
+          "hints_used": 0
+        },
+        {
+          "word": "AVERTISSEMENT",
+          "date": "2025-09-16T14:38:08.600738",
+          "difficulty": "hard",
+          "time": 14.739014863967896,
+          "hints_used": 0
+        },
+        {
+          "word": "ALIMENTATION",
+          "date": "2025-09-16T14:38:25.808038",
+          "difficulty": "hard",
+          "time": 9.505024909973145,
+          "hints_used": 0
+        },
+        {
+          "word": "RESPONSABILITE",
+          "date": "2025-09-16T14:39:16.801608",
+          "difficulty": "hard",
+          "time": 24.3624529838562,
+          "hints_used": 0
+        },
+        {
+          "word": "EXPLOITATION",
+          "date": "2025-09-16T14:39:30.428897",
+          "difficulty": "hard",
+          "time": 8.959362983703613,
+          "hints_used": 0
+        },
+        {
+          "word": "PROTESTATION",
+          "date": "2025-09-16T14:39:55.228089",
+          "difficulty": "hard",
+          "time": 20.503144025802612,
+          "hints_used": 0
+        },
+        {
+          "word": "REALISATION",
+          "date": "2025-09-16T14:40:08.175205",
+          "difficulty": "hard",
+          "time": 8.80178689956665,
+          "hints_used": 0
+        },
+        {
+          "word": "POSSIBILITE",
+          "date": "2025-09-16T14:41:23.793354",
+          "difficulty": "hard",
+          "time": 11.994668006896973,
+          "hints_used": 0
+        },
+        {
+          "word": "PROPOSITION",
+          "date": "2025-09-16T14:41:44.875413",
+          "difficulty": "hard",
+          "time": 16.792178869247437,
+          "hints_used": 0
+        },
+        {
+          "word": "PROTESTATION",
+          "date": "2025-09-16T15:49:06.129438",
+          "difficulty": "hard",
+          "time": 14.713963031768799,
+          "hints_used": 0
+        },
+        {
+          "word": "TRANSPORTER",
+          "date": "2025-09-16T15:49:44.984381",
+          "difficulty": "hard",
+          "time": 12.268091917037964,
+          "hints_used": 0
+        },
+        {
+          "word": "CONCENTRATION",
+          "date": "2025-09-16T15:51:24.473590",
+          "difficulty": "hard",
+          "time": 23.551398038864136,
+          "hints_used": 0
+        },
+        {
+          "word": "INTELLIGENCE",
+          "date": "2025-09-16T15:51:47.830193",
+          "difficulty": "hard",
+          "time": 12.596980094909668,
+          "hints_used": 0
+        }
+      ],
+      "lost": [
+        {
+          "word": "GOUVERNEMENT",
+          "date": "2025-09-16T14:32:03.026354",
+          "difficulty": "hard",
+          "time": 28.56070613861084,
+          "hints_used": 0
+        },
+        {
+          "word": "APPLICATION",
+          "date": "2025-09-16T14:33:46.043186",
+          "difficulty": "hard",
+          "time": 32.151113986968994,
+          "hints_used": 0
+        },
+        {
+          "word": "POURCENTAGE",
+          "date": "2025-09-16T14:34:45.340048",
+          "difficulty": "hard",
+          "time": 45.423117876052856,
+          "hints_used": 0
+        },
+        {
+          "word": "COMPOSITION",
+          "date": "2025-09-16T14:36:43.357420",
+          "difficulty": "hard",
+          "time": 28.61884307861328,
+          "hints_used": 0
+        },
+        {
+          "word": "DISTRIBUTION",
+          "date": "2025-09-16T14:37:31.638747",
+          "difficulty": "hard",
+          "time": 17.33180284500122,
+          "hints_used": 0
+        },
+        {
+          "word": "RENSEIGNEMENT",
+          "date": "2025-09-16T14:37:47.350980",
+          "difficulty": "hard",
+          "time": 10.282688856124878,
+          "hints_used": 0
+        },
+        {
+          "word": "APPLICATION",
+          "date": "2025-09-16T14:42:07.407846",
+          "difficulty": "hard",
+          "time": 16.383750915527344,
+          "hints_used": 0
+        },
+        {
+          "word": "AUGMENTATION",
+          "date": "2025-09-16T14:42:20.615979",
+          "difficulty": "hard",
+          "time": 8.456264019012451,
+          "hints_used": 0
+        },
+        {
+          "word": "ENTREPRENDRE",
+          "date": "2025-09-16T14:43:16.934205",
+          "difficulty": "hard",
+          "time": 2.4112281799316406,
+          "hints_used": 0
+        },
+        {
+          "word": "ECHANTILLON",
+          "date": "2025-09-16T14:43:58.815970",
+          "difficulty": "hard",
+          "time": 27.31296992301941,
+          "hints_used": 0
+        },
+        {
+          "word": "ENTHOUSIASME",
+          "date": "2025-09-16T14:45:13.371247",
+          "difficulty": "hard",
+          "time": 17.86835289001465,
+          "hints_used": 0
+        },
+        {
+          "word": "EXPLOITATION",
+          "date": "2025-09-16T15:48:41.859735",
+          "difficulty": "hard",
+          "time": 15.149665117263794,
+          "hints_used": 0
+        },
+        {
+          "word": "CONSEQUENCE",
+          "date": "2025-09-16T15:49:26.097906",
+          "difficulty": "hard",
+          "time": 3.4455630779266357,
+          "hints_used": 0
+        },
+        {
+          "word": "CORRESPONDRE",
+          "date": "2025-09-16T15:49:56.510900",
+          "difficulty": "hard",
+          "time": 3.3733479976654053,
+          "hints_used": 0
+        },
+        {
+          "word": "MODIFICATION",
+          "date": "2025-09-16T15:50:20.269257",
+          "difficulty": "hard",
+          "time": 19.634249925613403,
+          "hints_used": 0
+        },
+        {
+          "word": "INTELLIGENCE",
+          "date": "2025-09-16T15:50:31.736447",
+          "difficulty": "hard",
+          "time": 4.810724973678589,
+          "hints_used": 0
+        },
+        {
+          "word": "DEPARTEMENT",
+          "date": "2025-09-16T15:50:47.918506",
+          "difficulty": "hard",
+          "time": 10.852051973342896,
+          "hints_used": 0
+        },
+        {
+          "word": "RECOMMENCER",
+          "date": "2025-09-16T15:50:56.604969",
+          "difficulty": "hard",
+          "time": 4.292602062225342,
+          "hints_used": 0
+        },
+        {
+          "word": "MANIPULATION",
+          "date": "2025-09-16T15:52:17.210334",
+          "difficulty": "hard",
+          "time": 12.181626081466675,
+          "hints_used": 0
+        }
+      ]
+    },
+    "total_hints": 0,
+    "last_game_perfect": false
+  },
+  "kam": {
+    "games_played": 1,
+    "games_won": 1,
+    "total_words_found": 1,
+    "total_wrong_letters": 6,
+    "total_time": 167.21355605125427,
+    "best_time": 167.21355605125427,
+    "longest_word": 11,
+    "difficulty_stats": {
+      "easy": 1,
+      "middle": 0,
+      "hard": 0
+    },
+    "last_played": "2025-09-16T15:51:34.304786",
+    "current_streak": 1,
+    "best_streak": 1,
+    "difficulty_streaks": {
+      "easy": 0,
+      "middle": 0,
+      "hard": 0
+    },
+    "best_difficulty_streaks": {
+      "easy": 0,
+      "middle": 0,
+      "hard": 0
+    },
+    "achievements": [],
+    "hints_used": 0,
+    "words_history": {
+      "won": [
+        {
+          "word": "PERSPECTIVE",
+          "date": "2025-09-16T15:51:34.304814",
+          "difficulty": "easy",
+          "time": 167.21355605125427,
+          "hints_used": 0
+        }
+      ],
+      "lost": []
+    },
+    "total_hints": 0,
     "last_game_perfect": false
   }
 }
