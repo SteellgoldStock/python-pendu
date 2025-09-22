@@ -16,7 +16,7 @@ from dotenv import load_dotenv
 
 # Charger les variables d'environnement
 load_dotenv()
-from list import choose_random_word
+from list import choose_random_word, DICTIONARIES
 from hangman_art import draw_progress_bar
 
 app = FastAPI(title="Pendu Terminal API", version="1.0.0")
@@ -32,7 +32,8 @@ app.mount("/static", StaticFiles(directory="static"), name="static")
 class GameStart(BaseModel):
     player_name: str
     password: str
-    difficulty: str  # "easy", "middle", "hard"
+    difficulty: str
+    language: str = "fr"  # Langue par défaut : français
 
 class PlayerLogin(BaseModel):
     player_name: str
@@ -240,7 +241,7 @@ def validate_player_name(name: str) -> bool:
 
     return True
 
-def update_player_stats(player_name, won, word_length, wrong_letters_count, game_time, difficulty, hints_used=0, secret_word="", infinite_stats=None, is_infinite_mode=False):
+def update_player_stats(player_name, won, word_length, wrong_letters_count, game_time, difficulty, hints_used=0, secret_word="", infinite_stats=None, is_infinite_mode=False, language="fr"):
     stats = load_stats()
 
     if player_name not in stats:
@@ -271,7 +272,8 @@ def update_player_stats(player_name, won, word_length, wrong_letters_count, game
                 "total_lives_gained": 0,
                 "best_session_time": None,
                 "total_session_time": 0
-            }
+            },
+            "game_history": []
         }
 
     player_stats = stats[player_name]
@@ -288,6 +290,10 @@ def update_player_stats(player_name, won, word_length, wrong_letters_count, game
             "words_history": {"won": [], "lost": []},
             "total_hints": 0
         })
+
+    # Initialize game_history for existing players
+    if "game_history" not in player_stats:
+        player_stats["game_history"] = []
 
     # Initialize infinite mode stats for existing players
     if "infinite_mode_stats" not in player_stats:
@@ -388,8 +394,33 @@ def update_player_stats(player_name, won, word_length, wrong_letters_count, game
             # Temps total de session
             infinite_mode_stats["total_session_time"] += session_time
 
+    # Enregistrer cette partie dans l'historique
+    if not is_infinite_mode:  # Ne pas enregistrer les mots individuels du mode infini
+        game_record = {
+            "won": won,
+            "word_length": word_length,
+            "wrong_letters_count": wrong_letters_count,
+            "game_time": game_time,
+            "difficulty": difficulty,
+            "hints_used": hints_used,
+            "language": language,
+            "secret_word": secret_word,
+            "date": datetime.datetime.now().isoformat()
+        }
+        player_stats["game_history"].append(game_record)
+
     save_stats(stats)
     return player_stats
+
+@app.get("/api/languages")
+async def get_languages():
+    """Retourne la liste des langues disponibles"""
+    return {
+        "languages": [
+            {"code": code, "name": info["name"], "flag": info["flag"]}
+            for code, info in DICTIONARIES.items()
+        ]
+    }
 
 @app.get("/", response_class=HTMLResponse)
 async def read_root():
@@ -457,8 +488,12 @@ async def start_game(game_data: GameStart):
     if game_data.difficulty not in difficulty_map:
         raise HTTPException(status_code=400, detail="Invalid difficulty")
 
+    # Valider la langue
+    if game_data.language not in DICTIONARIES:
+        raise HTTPException(status_code=400, detail="Invalid language")
+
     difficulty_level = difficulty_map[game_data.difficulty]
-    secret_word = choose_random_word(difficulty_level)
+    secret_word = choose_random_word(difficulty_level, game_data.language)
     game_id = f"{game_data.player_name}_{datetime.datetime.now().timestamp()}"
 
     games[game_id] = {
@@ -469,6 +504,7 @@ async def start_game(game_data: GameStart):
         "wrong_letters": set(),
         "difficulty": difficulty_level,
         "difficulty_name": game_data.difficulty,
+        "language": game_data.language,  # Ajouter la langue
         "max_errors": max_errors_map[game_data.difficulty],
         "lives": max_errors_map[game_data.difficulty],  # Nouvelle source de vérité
         "errors": 0,
@@ -484,7 +520,7 @@ async def start_game(game_data: GameStart):
         wrong_letters=[],
         lives=max_errors_map[game_data.difficulty],
         max_lives=max_errors_map[game_data.difficulty],
-        message=f"Nouveau jeu commencé ! Mot de {len(secret_word)} lettres (difficulté: {game_data.difficulty})",
+        message=f"Nouveau jeu commencé ! Mot de {len(secret_word)} lettres (difficulté: {game_data.difficulty}, langue: {DICTIONARIES[game_data.language]['name']})",
         hints_used=0
     )
 
@@ -591,7 +627,7 @@ async def make_guess(guess_data: GameGuess):
                 player_stats = update_player_stats(
                     game["player_name"], False, len(game["secret_word"]),
                     len(game["wrong_letters"]), game_time, game["difficulty"],
-                    game["hints_used"], game["secret_word"]
+                    game["hints_used"], game["secret_word"], None, False, game.get("language", "fr")
                 )
 
                 progress_art = draw_progress_bar(game["errors"], game["max_errors"], game["difficulty"])
@@ -623,7 +659,7 @@ async def make_guess(guess_data: GameGuess):
             player_stats = update_player_stats(
                 game["player_name"], True, len(game["secret_word"]),
                 len(game["wrong_letters"]), game_time, game["difficulty"],
-                game["hints_used"], game["secret_word"]
+                game["hints_used"], game["secret_word"], None, False, game.get("language", "fr")
             )
 
             return GameResponse(
@@ -653,7 +689,7 @@ async def make_guess(guess_data: GameGuess):
                 player_stats = update_player_stats(
                     game["player_name"], False, len(game["secret_word"]),
                     len(game["wrong_letters"]), game_time, game["difficulty"],
-                    game["hints_used"], game["secret_word"]
+                    game["hints_used"], game["secret_word"], None, False, game.get("language", "fr")
                 )
 
                 progress_art = draw_progress_bar(game["errors"], game["max_errors"], game["difficulty"])
@@ -739,11 +775,94 @@ async def make_guess(guess_data: GameGuess):
     )
 
 @app.get("/api/stats/{player_name}")
-async def get_player_stats(player_name: str):
+async def get_player_stats(player_name: str, language: str = None):
     stats = load_stats()
     if player_name not in stats:
         raise HTTPException(status_code=404, detail="Player not found")
-    return stats[player_name]
+
+    player_stats = stats[player_name]
+
+    # Si aucune langue spécifiée, retourner toutes les stats
+    if not language:
+        return player_stats
+
+    # Filtrer par langue si spécifiée
+    filtered_stats = {
+        "games_played": 0,
+        "games_won": 0,
+        "total_words_found": 0,
+        "total_wrong_letters": 0,
+        "total_time": 0,
+        "best_time": None,
+        "longest_word": 0,
+        "current_streak": 0,
+        "best_streak": 0,
+        "total_hints": 0,
+        "difficulty_stats": {},
+        "infinite_mode_stats": {
+            "games_played": 0,
+            "best_words_found": 0,
+            "average_words_found": 0,
+            "max_lives_reached": 0,
+            "total_lives_gained": 0,
+            "best_session_time": None,
+            "total_session_time": 0
+        }
+    }
+
+    # Parcourir l'historique des parties pour filtrer par langue
+    game_history = player_stats.get("game_history", [])
+    language_games = [game for game in game_history if game.get("language") == language]
+
+    if not language_games:
+        return filtered_stats
+
+    # Calculer les stats pour cette langue
+    total_time = 0
+    best_time = None
+    won_games = 0
+    total_words = 0
+    total_wrong = 0
+    total_hints = 0
+    longest_word = 0
+    difficulty_counts = {}
+
+    for game in language_games:
+        total_time += game.get("game_time", 0)
+        total_words += 1 if game.get("won") else 0
+        total_wrong += game.get("wrong_letters_count", 0)
+        total_hints += game.get("hints_used", 0)
+
+        if game.get("won"):
+            won_games += 1
+            game_time = game.get("game_time", 0)
+            if best_time is None or game_time < best_time:
+                best_time = game_time
+
+        word_length = game.get("word_length", 0)
+        if word_length > longest_word:
+            longest_word = word_length
+
+        difficulty = game.get("difficulty", "unknown")
+        difficulty_counts[difficulty] = difficulty_counts.get(difficulty, 0) + 1
+
+    filtered_stats.update({
+        "games_played": len(language_games),
+        "games_won": won_games,
+        "total_words_found": total_words,
+        "total_wrong_letters": total_wrong,
+        "total_time": total_time,
+        "best_time": best_time,
+        "longest_word": longest_word,
+        "total_hints": total_hints,
+        "difficulty_stats": difficulty_counts
+    })
+
+    # Pour les stats du mode infini, on garde les stats globales car elles ne sont pas encore stockées par langue
+    if "infinite_mode_stats" in player_stats:
+        filtered_stats["infinite_mode_stats"] = player_stats["infinite_mode_stats"]
+
+    return filtered_stats
 
 @app.post("/api/infinite/stats")
 async def update_infinite_stats(infinite_data: dict):
@@ -772,7 +891,9 @@ async def update_infinite_stats(infinite_data: dict):
         wrong_letters_count=0,  # Pas important pour les stats infini
         game_time=0,  # Pas important pour les stats infini
         difficulty=0,  # Pas important pour les stats infini
-        infinite_stats=infinite_stats
+        infinite_stats=infinite_stats,
+        is_infinite_mode=True,
+        language="fr"  # Pour le mode infini, langue par défaut
     )
 
     return {"status": "success", "message": "Statistiques du mode infini enregistrées"}

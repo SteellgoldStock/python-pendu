@@ -5,6 +5,8 @@ class TerminalPendu {
         this.currentGame = null;
         this.playerName = null;
         this.playerPassword = null;
+        this.currentLanguage = "fr";  // Langue par défaut
+        this.availableLanguages = [];  // Liste des langues disponibles
         this.isAuthenticated = false;
         this.gameStartTime = null;
         this.sessionStartTime = null; // Pour le mode infini
@@ -82,13 +84,35 @@ class TerminalPendu {
         this.gameState = 'login';
     }
 
+    async loadAvailableLanguages() {
+        try {
+            const response = await fetch('/api/languages');
+            if (response.ok) {
+                const data = await response.json();
+                this.availableLanguages = data.languages;
+            }
+        } catch (error) {
+            console.warn('Erreur lors du chargement des langues:', error);
+            // Fallback
+            this.availableLanguages = [
+                {code: "fr", name: "Français", flag: "🇫🇷"},
+                {code: "en", name: "English", flag: "🇺🇸"}
+            ];
+        }
+    }
+
     showMenu() {
         this.clearTerminal();
         this.selectedMenuItem = 0;
+        // Récupérer la langue actuelle pour affichage
+        const currentLang = this.availableLanguages.find(lang => lang.code === this.currentLanguage);
+        const langDisplay = currentLang ? `${currentLang.flag} ${currentLang.name}` : '🇫🇷 Français';
+
         this.menuItems = [
             { text: '🎮  Jouer', command: 'play', class: 'success' },
             { text: '📊  Statistiques', command: 'stats', class: 'info' },
             { text: '🏆  Leaderboard', command: 'leaderboard', class: 'cyan' },
+            { text: `🌐  Changer de dictionnaire (${langDisplay})`, command: 'language', class: 'info' },
             { text: '🚪  Déconnexion', command: 'logout', class: 'warning' },
             { text: '❌  Quitter', command: 'quit', class: 'error' }
         ];
@@ -230,6 +254,9 @@ class TerminalPendu {
                     break;
                 case 'leaderboard':
                     await this.showLeaderboard();
+                    break;
+                case 'language':
+                    await this.showLanguageSelector();
                     break;
                 case 'logout':
                     this.logout();
@@ -427,7 +454,8 @@ class TerminalPendu {
                 body: JSON.stringify({
                     player_name: this.playerName,
                     password: this.playerPassword,
-                    difficulty: ['easy', 'middle', 'hard'][difficultyLevel]
+                    difficulty: ['easy', 'middle', 'hard'][difficultyLevel],
+                    language: this.currentLanguage
                 })
             });
 
@@ -828,7 +856,8 @@ class TerminalPendu {
                 body: JSON.stringify({
                     player_name: this.playerName,
                     password: this.playerPassword,
-                    difficulty: ['easy', 'middle', 'hard'][savedDifficultyLevel]
+                    difficulty: ['easy', 'middle', 'hard'][savedDifficultyLevel],
+                    language: this.currentLanguage
                 })
             });
 
@@ -906,7 +935,8 @@ class TerminalPendu {
                 body: JSON.stringify({
                     player_name: this.playerName,
                     password: this.playerPassword,
-                    difficulty: ['easy', 'middle', 'hard'][savedDifficultyLevel]
+                    difficulty: ['easy', 'middle', 'hard'][savedDifficultyLevel],
+                    language: this.currentLanguage
                 })
             });
 
@@ -1066,6 +1096,34 @@ class TerminalPendu {
 
         const choice = await this.showSelectionMenu(statsMenuItems, 'Que veux-tu voir ?');
 
+        if (!choice || (choice !== 'me' && choice !== 'other')) {
+            this.showMenu();
+            return;
+        }
+
+        // Sélection de la langue pour les statistiques
+        this.clearTerminal();
+        this.printOutput(`<span class="warning">═══════════════════════════════════════</span>`);
+        this.printOutput(`<span class="warning">    SÉLECTION DE LANGUE - STATISTIQUES   </span>`);
+        this.printOutput(`<span class="warning">═══════════════════════════════════════</span>\n`);
+
+        const languageMenuItems = [];
+        for (const [code, info] of Object.entries(this.availableLanguages)) {
+            languageMenuItems.push({
+                text: `${info.flag} ${info.name}`,
+                command: code,
+                class: code === this.currentLanguage ? 'success' : 'info'
+            });
+        }
+        languageMenuItems.push({ text: '🌍 Toutes les langues', command: 'all', class: 'warning' });
+
+        const selectedLanguage = await this.showSelectionMenu(languageMenuItems, 'Statistiques pour quelle langue ?');
+
+        if (!selectedLanguage) {
+            this.showMenu();
+            return;
+        }
+
         let playerName;
         if (choice === 'me') {
             playerName = this.playerName;
@@ -1075,13 +1133,13 @@ class TerminalPendu {
                 this.showMenu();
                 return;
             }
-        } else {
-            this.showMenu();
-            return;
         }
 
         try {
-            const response = await fetch(`/api/stats/${encodeURIComponent(playerName)}`);
+            const url = selectedLanguage === 'all'
+                ? `/api/stats/${encodeURIComponent(playerName)}`
+                : `/api/stats/${encodeURIComponent(playerName)}?language=${selectedLanguage}`;
+            const response = await fetch(url);
 
             if (!response.ok) {
                 if (response.status === 404) {
@@ -1098,7 +1156,11 @@ class TerminalPendu {
             this.clearTerminal();
 
             this.printOutput(`<span class="info">═══════════════════════════════════════</span>`);
-            this.printOutput(`<span class="info">       STATISTIQUES DE ${playerName.toUpperCase()}       </span>`);
+            const languageDisplay = selectedLanguage === 'all'
+                ? 'TOUTES LANGUES'
+                : `${this.availableLanguages[selectedLanguage]?.flag || ''} ${this.availableLanguages[selectedLanguage]?.name || selectedLanguage.toUpperCase()}`;
+            this.printOutput(`<span class="info">    STATISTIQUES DE ${playerName.toUpperCase()}    </span>`);
+            this.printOutput(`<span class="info">            ${languageDisplay}            </span>`);
             this.printOutput(`<span class="info">═══════════════════════════════════════</span>\n`);
 
             const gamesPlayed = stats.games_played || 0;
@@ -1237,6 +1299,35 @@ class TerminalPendu {
         this.output.scrollTop = this.output.scrollHeight;
     }
 
+    async showLanguageSelector() {
+        this.clearTerminal();
+
+        this.printOutput(`<span class="warning">═══════════════════════════════════════</span>`);
+        this.printOutput(`<span class="warning">        SÉLECTION DU DICTIONNAIRE        </span>`);
+        this.printOutput(`<span class="warning">═══════════════════════════════════════</span>\n`);
+
+        // Créer les éléments de menu pour les langues
+        const languageMenuItems = this.availableLanguages.map(lang => ({
+            text: `${lang.flag}  ${lang.name}`,
+            command: lang.code,
+            class: lang.code === this.currentLanguage ? 'success' : 'info'
+        }));
+
+        const choice = await this.showSelectionMenu(languageMenuItems, 'Choisissez votre dictionnaire :');
+
+        if (choice && choice !== this.currentLanguage) {
+            this.currentLanguage = choice;
+            const newLang = this.availableLanguages.find(lang => lang.code === choice);
+
+            this.clearTerminal();
+            this.printOutput(`<span class="success">✅ Dictionnaire changé !</span>`);
+            this.printOutput(`<span class="info">Nouveau dictionnaire : ${newLang.flag} ${newLang.name}</span>`);
+            await this.waitForInput('\nAppuie sur Entrée pour continuer...');
+        }
+
+        this.showMenu();
+    }
+
     async saveInfiniteStats() {
         if (!this.currentGame.infinite_mode || !this.sessionStartTime) return;
 
@@ -1268,6 +1359,7 @@ class TerminalPendu {
 }
 
 // Initialize terminal when page loads
-document.addEventListener('DOMContentLoaded', () => {
-    new TerminalPendu();
+document.addEventListener('DOMContentLoaded', async () => {
+    const terminal = new TerminalPendu();
+    await terminal.loadAvailableLanguages();
 });
